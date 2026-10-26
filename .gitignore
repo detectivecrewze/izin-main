@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.qa/
+.chrome-qa-profile/
+.env
+.env.*
+!.env.example
+*.log
