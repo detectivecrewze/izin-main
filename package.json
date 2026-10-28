@@ -7,7 +7,9 @@
     "dev": "vite --host 127.0.0.1",
     "build": "tsc --noEmit && vite build",
     "test": "vitest run",
-    "check": "npm run test && npm run build"
+    "worker:check": "tsc -p worker/tsconfig.json --noEmit",
+    "worker:dev": "wrangler dev --local --port 8787",
+    "check": "npm run test && npm run worker:check && npm run build"
   },
   "dependencies": {
     "@fontsource/caveat": "^5.3.0",

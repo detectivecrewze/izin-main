@@ -123,6 +123,10 @@ svg { width: 1.2em; height: 1.2em; display: block; }
 .form-section__title > span { width: 40px; height: 40px; display: grid; place-items: center; color: var(--studio-paper); border-radius: 50%; background: var(--studio-accent); font: 600 8px "IBM Plex Mono", monospace; }
 .form-section__title h2 { margin: 0; font: 400 26px/1.06 "DM Serif Display", serif; }
 .form-section__title p { margin: 7px 0 0; color: var(--studio-muted); font-size: 11px; line-height: 1.65; }
+.form-section__title--continued { margin-top: 34px; padding-top: 28px; border-top: 1px dashed var(--studio-line); }
+.file-button.has-error,.upload-song.has-error { border-color: #b2443d; color: #8f302a; }
+.upload-song.is-loading { opacity: .62; pointer-events: none; }
+.publish-button.has-error { background: #8f302a; }
 
 .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
 .field-grid--three { grid-template-columns: 1fr 1fr 1.2fr; }

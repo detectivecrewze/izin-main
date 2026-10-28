@@ -9,6 +9,7 @@ import '@fontsource/plus-jakarta-sans/latin-700.css';
 import './studio.css';
 import QRCode from 'qrcode';
 
+import { ApiError, loadStudioProject, publishStudioGift, saveStudioDraft, uploadStudioMedia } from './api';
 import { demoProject } from './demo';
 import { getGiftUi } from './gift-ui';
 import { validateProject, type IzinMainProject, type Locale, type ThemeId } from './project';
@@ -42,6 +43,7 @@ document.title = 'Izin Main Studio';
 const pathParts = window.location.pathname.split('/').filter(Boolean);
 const projectId = pathParts[1] || 'demo-permit';
 const accessToken = new URLSearchParams(window.location.search).get('token');
+const isDemoAccess = accessToken === 'demo-access';
 
 const icon = (name: 'arrow' | 'check' | 'eye' | 'image' | 'music' | 'upload' | 'save' | 'close' | 'copy' | 'spark' | 'folder' | 'download' | 'heart') => {
   const paths: Record<typeof name, string> = {
@@ -92,6 +94,9 @@ function loadDraft(): IzinMainProject {
 
 let project = loadDraft();
 project.headings ??= defaultHeadings(project.locale);
+let remotePublished = false;
+let remoteGiftUrl = '';
+let recipientResponse: import('./project').PermitResponse | null = null;
 const studioLanguageKey = `izin-main:studio-language:${projectId}`;
 const storedStudioLanguage = localStorage.getItem(studioLanguageKey);
 let uiLocale: Locale = storedStudioLanguage === 'en' ? 'en' : storedStudioLanguage === 'id' ? 'id' : (navigator.language.toLowerCase().startsWith('id') ? 'id' : 'en');
@@ -105,14 +110,11 @@ let uploadAudioUrl = project.music?.audioUrl.startsWith('blob:') ? project.music
 let previewAudio: HTMLAudioElement | undefined;
 
 const makeSteps = () => [
-  { label: c().openingStep, short: c().openingShort, section: 'gate-title' },
-  { label: c().summaryStep, short: c().summaryShort, section: 'summary-title' },
-  { label: c().partiesStep, short: c().partiesShort, section: 'profile-title' },
-  { label: c().planStep, short: c().planShort, section: 'plan-title' },
+  { label: `${c().openingStep} & ${c().partiesStep}`, short: c().partiesShort, section: 'gate-title' },
+  { label: `${c().summaryStep} & ${c().planStep}`, short: c().planShort, section: 'summary-title' },
   { label: c().commitmentsStep, short: c().commitmentsShort, section: 'commitment-title' },
   { label: c().noteStep, short: c().noteShort, section: 'defense-title' },
-  { label: c().decisionStep, short: c().decisionShort, section: 'decision-title' },
-  { label: c().endingStep, short: c().endingShort, section: 'permit-title' },
+  { label: `${c().decisionStep} & ${c().endingStep}`, short: c().endingShort, section: 'decision-title' },
   { label: c().styleStep, short: c().styleShort, section: 'summary-title' },
   { label: c().publishStep, short: c().publishShort, section: 'permit-title' },
 ];
@@ -125,20 +127,39 @@ if (storedStudioLanguage && project.locale !== uiLocale) {
 }
 document.documentElement.lang = uiLocale;
 
-if (!accessToken) {
+queueMicrotask(() => void bootstrapStudio());
+
+async function bootstrapStudio() {
+  if (!accessToken) return renderAccessError();
+  if (!isDemoAccess) {
+    app.innerHTML = `<main class="studio-access"><article><span class="studio-kicker">IZIN MAIN STUDIO</span><div class="studio-access__icon">${icon('folder')}</div><h1>${uiLocale === 'id' ? 'Membuka berkas…' : 'Opening your file…'}</h1><p>${uiLocale === 'id' ? 'Draft terbaru sedang diambil dengan aman.' : 'Your latest draft is being loaded securely.'}</p></article></main>`;
+    try {
+      const payload = await loadStudioProject(projectId, accessToken);
+      project = payload.project;
+      project.headings ??= defaultHeadings(project.locale);
+      recipientResponse = payload.response;
+      remotePublished = payload.status === 'Published' || payload.status === 'Disetujui';
+      remoteGiftUrl = payload.giftUrl || '';
+      localStorage.setItem(draftKey, JSON.stringify(project));
+      if (!storedStudioLanguage) uiLocale = project.locale;
+    } catch (cause) {
+      return renderAccessError(cause instanceof ApiError ? cause.message : undefined);
+    }
+  }
+  document.documentElement.lang = uiLocale;
+  if (!storedStudioLanguage) mountLanguageGate(); else mountStudio();
+}
+
+function renderAccessError(detail?: string) {
   app.innerHTML = `
     <main class="studio-access">
       <article>
         <span class="studio-kicker">IZIN MAIN STUDIO</span>
         <div class="studio-access__icon">${icon('folder')}</div>
         <h1>${c().invalidLinkTitle}</h1>
-        <p>${c().invalidLinkText}</p>
+        <p>${escapeHtml(detail || c().invalidLinkText)}</p>
       </article>
     </main>`;
-} else if (!storedStudioLanguage) {
-  mountLanguageGate();
-} else {
-  mountStudio();
 }
 
 function mountLanguageGate() {
@@ -164,7 +185,7 @@ function mountLanguageGate() {
   app.querySelector<HTMLButtonElement>('#language-gate-continue')?.addEventListener('click', () => {
     changeStudioLocale(uiLocale);
     localStorage.setItem(studioLanguageKey, uiLocale);
-    saveDraft();
+    void saveDraft();
     mountStudio();
   });
 }
@@ -476,19 +497,7 @@ function renderStepContent() {
       <div class="form-section__title"><span>01</span><div><h2>${c().openingEditorTitle}</h2><p>${c().openingEditorText}</p></div></div>
       ${sectionTitleEditor('opening')}
       ${field(c().fileNumber, 'requestNumber', project.requestNumber, { placeholder: 'IM/1411/ADIT-07', hint: c().fileNumberHint })}
-    </div>`;
-
-  if (currentStep === 1) return `
-    <div class="form-section">
-      <div class="form-section__title"><span>02</span><div><h2>${c().summaryEditorTitle}</h2><p>${c().summaryEditorText}</p></div></div>
-      ${sectionTitleEditor('summary')}
-      <div class="preset-row"><span>${c().requestTitlePresets}</span><button type="button" data-title-preset="serious">${c().seriousFunny}</button><button type="button" data-title-preset="short">${c().short}</button><button type="button" data-title-preset="sweet">${c().sweet}</button></div>
-      ${field(c().requestTitle, 'request.title', project.request.title, { placeholder: uiLocale === 'id' ? 'Contoh: Nongkrong sebentar, pulang tetap sayang' : 'Example: Out for a while, home with a smile', required: true, hint: c().requestTitleHint })}
-    </div>`;
-
-  if (currentStep === 2) return `
-    <div class="form-section">
-      <div class="form-section__title"><span>03</span><div><h2>${c().partiesEditorTitle}</h2><p>${c().partiesEditorText}</p></div></div>
+      <div class="form-section__title form-section__title--continued"><span>A</span><div><h2>${c().partiesEditorTitle}</h2><p>${c().partiesEditorText}</p></div></div>
       ${sectionTitleEditor('parties')}
       <div class="photo-grid">
         ${photoUpload('applicant', c().applicantPhoto, project.applicant.name, project.applicant.photoUrl)}
@@ -505,9 +514,13 @@ function renderStepContent() {
       ${textarea(c().intro, 'applicant.intro', project.applicant.intro || '', { placeholder: uiLocale === 'id' ? 'Ceritakan singkat kenapa kamu membuat berkas ini…' : 'Briefly share why you made this little file…', hint: c().introHint, maxlength: 320 })}
     </div>`;
 
-  if (currentStep === 3) return `
+  if (currentStep === 1) return `
     <div class="form-section">
-      <div class="form-section__title"><span>04</span><div><h2>${c().planEditorTitle}</h2><p>${c().planEditorText}</p></div></div>
+      <div class="form-section__title"><span>02</span><div><h2>${c().summaryEditorTitle}</h2><p>${c().summaryEditorText}</p></div></div>
+      ${sectionTitleEditor('summary')}
+      <div class="preset-row"><span>${c().requestTitlePresets}</span><button type="button" data-title-preset="serious">${c().seriousFunny}</button><button type="button" data-title-preset="short">${c().short}</button><button type="button" data-title-preset="sweet">${c().sweet}</button></div>
+      ${field(c().requestTitle, 'request.title', project.request.title, { placeholder: uiLocale === 'id' ? 'Contoh: Nongkrong sebentar, pulang tetap sayang' : 'Example: Out for a while, home with a smile', required: true, hint: c().requestTitleHint })}
+      <div class="form-section__title form-section__title--continued"><span>B</span><div><h2>${c().planEditorTitle}</h2><p>${c().planEditorText}</p></div></div>
       ${sectionTitleEditor('plan')}
       ${textarea(c().activity, 'request.activity', project.request.activity, { placeholder: uiLocale === 'id' ? 'Contoh: makan ramen lalu main board game' : 'Example: ramen and a board-game night', hint: c().activityHint, maxlength: 240, required: true })}
       <div class="field-grid field-grid--three">
@@ -524,49 +537,40 @@ function renderStepContent() {
       ${textarea(c().planNote, 'request.note', project.request.note || '', { placeholder: uiLocale === 'id' ? 'Contoh: Kalau pindah tempat, aku kabari dulu.' : 'Example: I will tell you first if the venue changes.', maxlength: 260 })}
     </div>`;
 
-  if (currentStep === 4) return `
+  if (currentStep === 2) return `
     <div class="form-section">
-      <div class="form-section__title"><span>05</span><div><h2>${c().commitmentsEditorTitle}</h2><p>${c().commitmentsEditorText}</p></div></div>
+      <div class="form-section__title"><span>03</span><div><h2>${c().commitmentsEditorTitle}</h2><p>${c().commitmentsEditorText}</p></div></div>
       ${sectionTitleEditor('commitments')}
       <div class="commitment-editor">
-        ${project.commitments.map((item, index) => `<label class="commitment-editor__item ${item.enabled ? 'is-enabled' : ''}">
-          <input type="checkbox" data-commitment-index="${index}" data-commitment-key="enabled" ${item.enabled ? 'checked' : ''} />
-          <span>${item.enabled ? icon('check') : ''}</span>
-          <input type="text" data-commitment-index="${index}" data-commitment-key="text" value="${escapeHtml(item.text)}" maxlength="120" aria-label="${c().commitmentLabel} ${index + 1}" />
-          <small>${String(index + 1).padStart(2, '0')}</small>
-        </label>`).join('')}
+        ${project.commitments.map((item, index) => `<label class="commitment-editor__item ${item.enabled ? 'is-enabled' : ''}"><input type="checkbox" data-commitment-index="${index}" data-commitment-key="enabled" ${item.enabled ? 'checked' : ''} /><span>${item.enabled ? icon('check') : ''}</span><input type="text" data-commitment-index="${index}" data-commitment-key="text" value="${escapeHtml(item.text)}" maxlength="120" aria-label="${c().commitmentLabel} ${index + 1}" /><small>${String(index + 1).padStart(2, '0')}</small></label>`).join('')}
       </div>
     </div>`;
 
-  if (currentStep === 5) return `
+  if (currentStep === 3) return `
     <div class="form-section">
-      <div class="form-section__title"><span>06</span><div><h2>${c().noteEditorTitle}</h2><p>${c().noteEditorText}</p></div></div>
+      <div class="form-section__title"><span>04</span><div><h2>${c().noteEditorTitle}</h2><p>${c().noteEditorText}</p></div></div>
       ${sectionTitleEditor('defense')}
       <div class="preset-row"><span>${c().messagePresets}</span><button type="button" data-note-preset="sweet">${c().sweet}</button><button type="button" data-note-preset="funny">${c().funny}</button><button type="button" data-note-preset="direct">${c().direct}</button></div>
       ${textarea(c().applicantMessage, 'defenseNote', project.defenseNote, { placeholder: uiLocale === 'id' ? 'Tulis alasan jujurmu dan bagaimana kamu akan menjaga kepercayaan…' : 'Share your honest reason and how you will keep their trust…', hint: c().applicantMessageHint, maxlength: 500, required: true })}
     </div>`;
 
-  if (currentStep === 6) return `
+  if (currentStep === 4) return `
     <div class="form-section">
-      <div class="form-section__title"><span>07</span><div><h2>${c().decisionEditorTitle}</h2><p>${c().decisionEditorText}</p></div></div>
+      <div class="form-section__title"><span>05</span><div><h2>${c().decisionEditorTitle}</h2><p>${c().decisionEditorText}</p></div></div>
       ${sectionTitleEditor('decision')}
       ${field(c().decisionEyebrow, 'decision.eyebrow', project.decision.eyebrow || '', { placeholder: uiLocale === 'id' ? 'Semua detail sudah dibaca…' : 'Every detail has been read…' })}
       ${field(c().finalQuestion, 'decision.question', project.decision.question, { placeholder: uiLocale === 'id' ? 'Jadi… boleh aku main sebentar?' : 'So… may I go out for a while?', required: true })}
       ${field(c().approvalButton, 'decision.approvedLabel', project.decision.approvedLabel, { placeholder: uiLocale === 'id' ? 'Disetujui' : 'Approved', required: true })}
-    </div>`;
-
-  if (currentStep === 7) return `
-    <div class="form-section">
-      <div class="form-section__title"><span>08</span><div><h2>${c().endingEditorTitle}</h2><p>${c().endingEditorText}</p></div></div>
+      <div class="form-section__title form-section__title--continued"><span>C</span><div><h2>${c().endingEditorTitle}</h2><p>${c().endingEditorText}</p></div></div>
       ${sectionTitleEditor('ending')}
       ${textarea(c().approvedMessage, 'decision.approvedMessage', project.decision.approvedMessage, { placeholder: uiLocale === 'id' ? 'Terima kasih sudah percaya…' : 'Thank you for trusting me…', maxlength: 320, required: true })}
       ${field(c().permitCardTitle, 'card.title', project.card.title, { placeholder: uiLocale === 'id' ? 'Surat Izin Main Resmi' : 'Official Going-Out Permit', required: true })}
       ${textarea(c().permitCardFooter, 'card.footer', project.card.footer || '', { placeholder: uiLocale === 'id' ? 'Sah selama tetap memberi kabar…' : 'Valid while updates are given…', maxlength: 220 })}
     </div>`;
 
-  if (currentStep === 8) return `
+  if (currentStep === 5) return `
     <div class="form-section">
-      <div class="form-section__title"><span>09</span><div><h2>${c().styleEditorTitle}</h2><p>${c().styleEditorText}</p></div></div>
+      <div class="form-section__title"><span>06</span><div><h2>${c().styleEditorTitle}</h2><p>${c().styleEditorText}</p></div></div>
       <fieldset class="choice-fieldset"><legend>${c().colorTheme}</legend><div class="theme-options">
         ${(Object.keys(themes) as ThemeId[]).map((themeId) => { const theme = themes[themeId]; return `<button type="button" data-theme="${themeId}" class="${project.theme === themeId ? 'is-selected' : ''}" style="--theme-color:${theme.color};--theme-dark:${theme.dark};--theme-paper:${theme.paper}"><span></span><strong>${theme.label}</strong><small>${themeId === 'district-office' ? c().districtThemeHint : c().crimsonThemeHint}</small></button>`; }).join('')}
       </div></fieldset>
@@ -580,10 +584,10 @@ function renderStepContent() {
     </div>`;
 
   const issues = translateIssues(validateProject(project, { allowLocalMedia: true }));
-  const published = localStorage.getItem(publishedKey);
+  const published = isDemoAccess ? Boolean(localStorage.getItem(publishedKey)) : remotePublished;
   return `
     <div class="form-section form-section--review">
-      <div class="form-section__title"><span>10</span><div><h2>${c().publishEditorTitle}</h2><p>${c().publishEditorText}</p></div></div>
+      <div class="form-section__title"><span>07</span><div><h2>${c().publishEditorTitle}</h2><p>${c().publishEditorText}</p></div></div>
       <div class="review-grid">
         <article><span>${c().forLabel}</span><strong>${escapeHtml(project.recipient.nickname || project.recipient.name)}</strong><small>${escapeHtml(project.request.title)}</small></article>
         <article><span>${c().scheduleLabel}</span><strong>${escapeHtml(project.request.date)}</strong><small>${escapeHtml(project.request.departureTime)} — ${escapeHtml(project.request.returnEstimate)}</small></article>
@@ -591,6 +595,7 @@ function renderStepContent() {
         <article><span>${c().soundtrackLabel}</span><strong>${escapeHtml(project.music?.title || c().noMusic)}</strong><small>${escapeHtml(project.music?.artist || c().notSelected)}</small></article>
       </div>
       ${issues.length ? `<div class="validation-card"><strong>${c().issuesTitle}</strong><ul>${issues.map((issue) => `<li>${escapeHtml(issue)}</li>`).join('')}</ul></div>` : `<div class="ready-card">${icon('check')}<span><strong>${c().readyTitle}</strong><small>${c().readyText}</small></span></div>`}
+      ${recipientResponse ? `<div class="ready-card">${icon('heart')}<span><strong>${uiLocale === 'id' ? 'Penerima sudah menyetujui' : 'Recipient approved'}</strong><small>${escapeHtml(new Intl.DateTimeFormat(uiLocale === 'id' ? 'id-ID' : 'en-US', { dateStyle: 'long', timeStyle: 'short' }).format(new Date(recipientResponse.respondedAt)))}</small></span></div>` : ''}
       <button class="publish-button" id="publish-button" type="button" ${issues.length ? 'disabled' : ''}>${icon('save')}<span>${published ? c().updateGift : c().publishGift}</span>${icon('arrow')}</button>
       <div class="publish-result" id="publish-result" ${published ? '' : 'hidden'}>
         <article class="publish-barcode" id="publish-barcode">
@@ -639,7 +644,7 @@ function renderStep() {
     next.querySelector('span')!.textContent = currentStep === steps.length - 2 ? c().reviewPublish : c().next;
   }
   renderSideSummary();
-  if (currentStep === steps.length - 1 && localStorage.getItem(publishedKey)) void renderPublishBarcode();
+  if (currentStep === steps.length - 1 && (isDemoAccess ? localStorage.getItem(publishedKey) : remotePublished)) void renderPublishBarcode();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -724,14 +729,15 @@ function queueSave() {
   const state = document.querySelector<HTMLElement>('#save-state');
   if (state) { state.classList.add('is-saving'); state.innerHTML = `${icon('save')} ${c().saving}`; }
   window.clearTimeout(saveTimer);
-  saveTimer = window.setTimeout(saveDraft, 520);
+  saveTimer = window.setTimeout(() => void saveDraft(), 520);
 }
 
-function saveDraft() {
+async function saveDraft() {
   const state = document.querySelector<HTMLElement>('#save-state');
   try {
     localStorage.setItem(draftKey, JSON.stringify(project));
     writePreviewProject();
+    if (!isDemoAccess && accessToken) await saveStudioDraft(projectId, accessToken, project);
     if (state) {
       state.classList.remove('is-saving', 'has-error');
       state.innerHTML = `${icon('check')} ${c().saved}`;
@@ -768,7 +774,7 @@ function renderSideSummary() {
 }
 
 function openPreview() {
-  saveDraft();
+  void saveDraft();
   const dialog = document.querySelector<HTMLDialogElement>('#preview-dialog');
   const label = document.querySelector<HTMLElement>('#preview-label');
   if (label) label.textContent = steps[currentStep].label;
@@ -819,19 +825,27 @@ function toggleSongPreview(index: number, button: HTMLButtonElement) {
   previewAudio.addEventListener('ended', () => button.classList.remove('is-playing'), { once: true });
 }
 
-function handleAudioUpload(input: HTMLInputElement) {
+async function handleAudioUpload(input: HTMLInputElement) {
   const file = input.files?.[0];
   if (!file) return;
-  if (uploadAudioUrl) URL.revokeObjectURL(uploadAudioUrl);
-  uploadAudioUrl = URL.createObjectURL(file);
-  project.music = {
-    title: file.name.replace(/\.[^.]+$/, ''),
-    artist: c().ownUploadArtist,
-    audioUrl: uploadAudioUrl,
-    source: 'upload',
-  };
-  queueSave();
-  renderStep();
+  const holder = input.closest<HTMLElement>('.upload-song');
+  holder?.classList.add('is-loading');
+  try {
+    if (uploadAudioUrl?.startsWith('blob:')) URL.revokeObjectURL(uploadAudioUrl);
+    uploadAudioUrl = isDemoAccess || !accessToken
+      ? URL.createObjectURL(file)
+      : (await uploadStudioMedia(projectId, accessToken, file, file.name)).url;
+    project.music = {
+      title: file.name.replace(/\.[^.]+$/, ''), artist: c().ownUploadArtist,
+      audioUrl: uploadAudioUrl, source: 'upload',
+    };
+    queueSave();
+    renderStep();
+  } catch {
+    holder?.classList.add('has-error');
+  } finally {
+    holder?.classList.remove('is-loading');
+  }
 }
 
 async function handlePhoto(input: HTMLInputElement) {
@@ -840,17 +854,21 @@ async function handlePhoto(input: HTMLInputElement) {
   const button = input.closest<HTMLElement>('.file-button');
   button?.classList.add('is-loading');
   try {
-    const dataUrl = await compressImage(file);
+    const image = await compressImage(file);
     const kind = input.dataset.photo as 'applicant' | 'recipient';
-    project[kind].photoUrl = dataUrl;
+    project[kind].photoUrl = isDemoAccess || !accessToken
+      ? image.dataUrl
+      : (await uploadStudioMedia(projectId, accessToken, image.blob, `${kind}.webp`)).url;
     queueSave();
     renderStep();
+  } catch {
+    button?.classList.add('has-error');
   } finally {
     button?.classList.remove('is-loading');
   }
 }
 
-async function compressImage(file: File): Promise<string> {
+async function compressImage(file: File): Promise<{ blob: Blob; dataUrl: string }> {
   const bitmap = await createImageBitmap(file);
   const scale = Math.min(1, 1200 / Math.max(bitmap.width, bitmap.height));
   const canvas = document.createElement('canvas');
@@ -858,7 +876,8 @@ async function compressImage(file: File): Promise<string> {
   canvas.height = Math.max(1, Math.round(bitmap.height * scale));
   canvas.getContext('2d')?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
   bitmap.close();
-  return canvas.toDataURL('image/webp', .78);
+  const blob = await new Promise<Blob>((resolve, reject) => canvas.toBlob((value) => value ? resolve(value) : reject(new Error('Image conversion failed')), 'image/webp', .78));
+  return { blob, dataUrl: canvas.toDataURL('image/webp', .78) };
 }
 
 function openTitlePreset(tone: string) {
@@ -997,22 +1016,38 @@ function translateIssues(issues: string[]) {
   return issues.map((issue) => translations[issue] || issue);
 }
 
-function publishGift() {
-  saveDraft();
+async function publishGift() {
+  const button = document.querySelector<HTMLButtonElement>('#publish-button');
+  if (button) button.disabled = true;
+  await saveDraft();
   const issues = validateProject(project, { allowLocalMedia: true });
-  if (issues.length) return;
+  if (issues.length) { if (button) button.disabled = false; return; }
   const snapshot = structuredClone(project);
   if (snapshot.music?.source === 'upload' && uploadAudioUrl) snapshot.music.audioUrl = uploadAudioUrl;
-  localStorage.setItem(publishedKey, JSON.stringify(snapshot));
-  const result = document.querySelector<HTMLElement>('#publish-result');
-  result?.removeAttribute('hidden');
-  const button = document.querySelector<HTMLButtonElement>('#publish-button');
-  if (button) button.innerHTML = `${icon('check')}<span>${c().giftUpdated}</span>`;
-  document.querySelector<HTMLElement>('#published-link')!.textContent = publicGiftUrl();
-  void renderPublishBarcode();
+  try {
+    if (isDemoAccess || !accessToken) localStorage.setItem(publishedKey, JSON.stringify(snapshot));
+    else {
+      const result = await publishStudioGift(projectId, accessToken, snapshot);
+      remotePublished = true;
+      remoteGiftUrl = result.giftUrl;
+    }
+    const result = document.querySelector<HTMLElement>('#publish-result');
+    result?.removeAttribute('hidden');
+    if (button) button.innerHTML = `${icon('check')}<span>${c().giftUpdated}</span>`;
+    document.querySelector<HTMLElement>('#published-link')!.textContent = publicGiftUrl();
+    document.querySelectorAll<HTMLAnchorElement>('.publish-result__actions a').forEach((link) => { link.href = publicGiftUrl(); });
+    void renderPublishBarcode();
+  } catch (cause) {
+    if (button) {
+      button.disabled = false;
+      button.classList.add('has-error');
+      button.innerHTML = `${icon('save')}<span>${cause instanceof Error ? escapeHtml(cause.message) : c().saveFailedShort}</span>`;
+    }
+  }
 }
 
 function publicGiftUrl() {
+  if (remoteGiftUrl) return remoteGiftUrl;
   const url = new URL('/', window.location.origin);
   url.searchParams.set('gift', projectId);
   return url.href;

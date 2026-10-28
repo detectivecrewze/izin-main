@@ -1,7 +1,7 @@
 import type { Locale } from './project';
 
 const id = {
-  formCode: 'FORM IM-01', paperTitle: 'Ada rencana kecil\nbuat kamu cek', paperSubtitle: 'punya satu permintaan untuk', swipeHint: 'GESER SETIAP LEMBAR KE KANAN',
+  formCode: 'FORM IM-01', paperSubtitle: 'punya satu permintaan untuk', swipeHint: 'GESER SETIAP LEMBAR KE KANAN',
   gateTitle: 'Permohonan', gateEmphasis: 'Izin Main', gateHint: 'Seseorang memilih bikin berkas lengkap daripada cuma bilang: “aku pergi dulu, ya.”',
   summaryTitle: 'Aku mau main sebentar.\nIni rencana lengkapnya.', requestLabel: 'PERMOHONAN', summaryPrefix: 'Buat', summarySuffix: 'supaya kamu nggak perlu tanya satu-satu dan aku nggak bisa menjawab, “lihat nanti, ya.”', reviewMark: 'UNTUK DIPERIKSA', requestTicket: 'REQUEST',
   partiesEyebrow: 'DUA PIHAK', partiesTitle: 'Yang minta izin & yang pegang stempel.', applicantRole: 'pengaju izin main', recipientRole: 'pemegang keputusan akhir', submitting: 'MENGAJUKAN', littleNote: 'CATATAN KECIL', verified: 'DATA SESUAI',
@@ -15,7 +15,7 @@ const id = {
 };
 
 const en: typeof id = {
-  formCode: 'FORM GP-01', paperTitle: 'A small plan\nfor you to review', paperSubtitle: 'has one request for', swipeHint: 'SWIPE EACH SHEET TO THE RIGHT',
+  formCode: 'FORM GP-01', paperSubtitle: 'has one request for', swipeHint: 'SWIPE EACH SHEET TO THE RIGHT',
   gateTitle: 'Going-Out', gateEmphasis: 'Permit', gateHint: 'Someone chose to prepare a complete file instead of simply saying: “I’m heading out.”',
   summaryTitle: 'I want to go out for a while.\nHere is the full plan.', requestLabel: 'REQUEST', summaryPrefix: 'For', summarySuffix: 'so you do not have to ask for every detail or hear “I’ll tell you later.”', reviewMark: 'FOR REVIEW', requestTicket: 'REQUEST',
   partiesEyebrow: 'TWO PEOPLE', partiesTitle: 'The applicant & the person holding the stamp.', applicantRole: 'going-out permit applicant', recipientRole: 'holder of the final stamp', submitting: 'SUBMITTING TO', littleNote: 'A SMALL NOTE', verified: 'DETAILS VERIFIED',

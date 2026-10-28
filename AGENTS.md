@@ -4,7 +4,7 @@ Baca `PRD.md` dan `README.md` sepenuhnya sebelum mengubah proyek. Produk ini ada
 
 ## Acceptance gate wajib
 
-Gift Pages sudah disetujui owner dan fase aktif sekarang adalah **Customer Studio**. Jangan membuat Worker production, dashboard, checkout, atau integrasi storefront sebelum pengalaman Studio disetujui.
+Gift Pages dan Customer Studio sudah disetujui owner. Fase aktif sekarang adalah **Worker, storage, dan admin internal minimal**. Jangan mengerjakan payment/storefront production sebelum Phase 3 lolos review dan owner memberi arahan berikutnya.
 
 ## Data dan konten
 
@@ -44,6 +44,9 @@ Copy harus netral gender dan hangat. Keputusan produk terbaru hanya menampilkan 
 - R2 bersama `valentine-upload` dengan prefix `izin-main/{projectId}/`.
 - `pakasir-sandbox` selalu menjadi tempat pertama untuk eksperimen payment.
 - Business logic yang telah lulus dipindahkan terkontrol ke `pakasir-gateway`; jangan menyalin seluruh folder dan menghapus guard production.
+- Admin internal memakai endpoint terautentikasi Worker dan tidak boleh menduplikasi editor Customer Studio.
+- Draft yang belum lengkap harus boleh diautosave; validasi lengkap hanya wajib saat publish.
+- Project creation wajib idempotent agar retry payment/webhook tidak membuat link Studio ganda.
 
 ## Larangan operasional
 

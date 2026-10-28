@@ -10,6 +10,7 @@ import '@fontsource/plus-jakarta-sans/latin-600.css';
 import '@fontsource/plus-jakarta-sans/latin-700.css';
 import './styles.css';
 
+import { approvePublicGift, loadPublicGift, loadPublicResponse } from './api';
 import { getCopy } from './copy';
 import { demoProject } from './demo';
 import { getGiftUi } from './gift-ui';
@@ -35,7 +36,19 @@ function readStoredProject(key?: string): IzinMainProject | undefined {
   }
 }
 
-const project = structuredClone(readStoredProject(storedProjectKey) ?? demoProject);
+let usesRemoteGift = false;
+let projectSource = readStoredProject(storedProjectKey);
+if (!projectSource && publishedGiftId) {
+  try {
+    projectSource = (await loadPublicGift(publishedGiftId)).project;
+    usesRemoteGift = true;
+  } catch {
+    const failedRoot = document.querySelector<HTMLDivElement>('#app');
+    if (failedRoot) failedRoot.innerHTML = `<main class="gift-load-error"><article><span>IZIN MAIN</span><h1>Berkas belum dapat dibuka</h1><p>Periksa kembali link gift atau coba beberapa saat lagi.</p><button type="button" onclick="location.reload()">Coba lagi</button></article></main>`;
+    throw new Error('Published gift could not be loaded.');
+  }
+}
+const project = structuredClone(projectSource ?? demoProject);
 const requestedTheme = pageParams.get('theme');
 if (requestedTheme && requestedTheme in themes) project.theme = requestedTheme as ThemeId;
 const strings = getCopy(project.locale);
@@ -60,7 +73,12 @@ if (!root) throw new Error('App root is missing');
 document.title = `Izin Main — ${project.applicant.nickname || project.applicant.name}`;
 
 const issues = validateProject(project, { allowLocalMedia: Boolean(studioPreviewId) });
-if (issues.length) throw new Error(`Invalid demo project: ${issues.join(', ')}`);
+// Studio preview intentionally renders an in-progress draft. The customer may
+// still be several steps away from completing fields that are required at
+// publish time, so blocking the renderer here would leave the preview iframe
+// as an empty themed canvas. Public gifts remain protected by strict
+// validation; Studio performs the same strict validation when publishing.
+if (issues.length && !studioPreviewId) throw new Error(`Invalid gift project: ${issues.join(', ')}`);
 
 const icon = (name: 'folder' | 'arrow' | 'pin' | 'clock' | 'people' | 'check' | 'download' | 'share' | 'message' | 'close' | 'play' | 'pause' | 'music' | 'musicOff') => {
   const paths: Record<typeof name, string> = {
@@ -104,7 +122,6 @@ root.innerHTML = `
       <div class="folder" id="folder">
         <div class="folder__paper" aria-hidden="true">
           <span>${ui.formCode} / ${project.requestNumber}</span>
-          <strong>${ui.paperTitle.replace('\n', '<br>')}</strong>
           <small>${project.applicant.nickname || project.applicant.name} ${ui.paperSubtitle} ${recipientDisplay}</small>
           <i>${ui.swipeHint}</i>
         </div>
@@ -479,20 +496,49 @@ function storeResponse(response: PermitResponse) {
   localStorage.setItem(`izin-main:demo-response:${project.id}`, JSON.stringify(response));
 }
 
-document.querySelector<HTMLButtonElement>('#approve-button')?.addEventListener('click', () => {
-  const now = new Date();
-  storeResponse({ projectId: project.id, status: 'approved', respondedAt: now.toISOString() });
+function showApprovedState(response: PermitResponse, navigate = false) {
   decisionFile?.classList.add('is-approved');
   decisionStamp?.removeAttribute('aria-hidden');
   if (decisionMessage) decisionMessage.textContent = project.decision.approvedMessage;
   if (decisionActions) decisionActions.hidden = true;
+  permitSection?.removeAttribute('hidden');
   const approvalDate = document.querySelector<HTMLElement>('#approval-date');
-  if (approvalDate) approvalDate.textContent = `${strings.approvedAt} ${new Intl.DateTimeFormat(dateLocale, { dateStyle: 'medium' }).format(now)}`;
-  window.setTimeout(() => {
-    permitSection?.removeAttribute('hidden');
-    renderPageNavigation();
-    goToPage(availablePages().length - 1);
-  }, 780);
+  if (approvalDate) approvalDate.textContent = `${strings.approvedAt} ${new Intl.DateTimeFormat(dateLocale, { dateStyle: 'medium' }).format(new Date(response.respondedAt))}`;
+  renderPageNavigation();
+  if (navigate) window.setTimeout(() => goToPage(availablePages().length - 1), 780);
+}
+
+async function restoreResponse() {
+  try {
+    if (usesRemoteGift) {
+      const { response } = await loadPublicResponse(project.id);
+      if (response?.status === 'approved') showApprovedState(response);
+      return;
+    }
+    const stored = localStorage.getItem(`izin-main:demo-response:${project.id}`);
+    if (stored) showApprovedState(JSON.parse(stored) as PermitResponse);
+  } catch { /* public gift remains usable when response status is temporarily unavailable */ }
+}
+
+void restoreResponse();
+
+document.querySelector<HTMLButtonElement>('#approve-button')?.addEventListener('click', async (event) => {
+  const button = event.currentTarget as HTMLButtonElement;
+  button.disabled = true;
+  const now = new Date();
+  let response: PermitResponse;
+  try {
+    if (usesRemoteGift) response = (await approvePublicGift(project.id)).response;
+    else {
+      response = { projectId: project.id, status: 'approved', respondedAt: now.toISOString() };
+      storeResponse(response);
+    }
+  } catch {
+    button.disabled = false;
+    button.title = project.locale === 'id' ? 'Persetujuan belum tersimpan. Coba lagi.' : 'Approval was not saved. Try again.';
+    return;
+  }
+  showApprovedState(response, true);
 });
 
 function wrapCanvasText(context: CanvasRenderingContext2D, text: string, x: number, y: number, maxWidth: number, lineHeight: number, maxLines = 5) {

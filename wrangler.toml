@@ -1,0 +1,19 @@
+name = "izin-main"
+main = "worker/src/index.ts"
+compatibility_date = "2026-10-01"
+
+[vars]
+ALLOWED_ORIGINS = "http://127.0.0.1:5176,http://localhost:5176"
+PUBLIC_APP_URL = "http://127.0.0.1:5176"
+PUBLIC_API_URL = "http://127.0.0.1:8787"
+
+[[kv_namespaces]]
+binding = "IZIN_MAIN_KV"
+id = "00000000000000000000000000000000"
+preview_id = "00000000000000000000000000000000"
+
+[[r2_buckets]]
+binding = "MEDIA"
+bucket_name = "valentine-upload"
+
+# Set ADMIN_TOKEN through `wrangler secret put ADMIN_TOKEN` before deployment.
