@@ -85,6 +85,18 @@ svg { width: 1.25em; height: 1.25em; display: block; }
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.19'/%3E%3C/svg%3E");
 }
 
+/* The storefront renders the gift inside a large modal iframe. Avoid stacking
+   fixed blend/filter layers with the horizontal page and printer animations;
+   this keeps Chromium's compositor stable without changing the standalone
+   gift presentation. */
+:root[data-embedded-demo="true"] .grain { display: none; }
+:root[data-embedded-demo="true"] .gift-pages { scroll-behavior: auto; }
+:root[data-embedded-demo="true"] .theme-demo__toggle,
+:root[data-embedded-demo="true"] .theme-demo__options,
+:root[data-embedded-demo="true"] .masthead,
+:root[data-embedded-demo="true"] .page-navigation,
+:root[data-embedded-demo="true"] .audio-toggle button { backdrop-filter: none; }
+
 .theme-demo {
   position: fixed;
   z-index: 60;

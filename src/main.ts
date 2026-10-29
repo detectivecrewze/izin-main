@@ -29,6 +29,7 @@ const publishedGiftId = explicitPublishedGiftId ?? (isDefaultPublicGift ? defaul
 // The root-domain showcase uses the curated KV project too, but remains
 // replayable and never writes a recipient response.
 const isStorefrontDemo = pageParams.get('demo') === '1' || window.parent !== window || isDefaultPublicGift;
+document.documentElement.dataset.embeddedDemo = isStorefrontDemo ? 'true' : 'false';
 const storedProjectKey = studioPreviewId
   ? `izin-main:studio-preview:${studioPreviewId}`
   : publishedGiftId
@@ -314,7 +315,7 @@ root.innerHTML = `
         <span>07 / 07</span>
         <div><p>${ui.completeEyebrow}</p><h2 id="permit-title">${headings.endingTitle}</h2></div>
       </div>
-      <div class="permit-printer is-printing" id="permit-printer">
+      <div class="permit-printer" id="permit-printer">
         <div class="permit-printer__machine"><span>${ui.office}</span><i></i></div>
         <article class="permit-card" id="permit-card">
           <div class="permit-card__top"><span>${strings.agency}</span><strong>${project.card.title}</strong><small>${project.requestNumber}</small></div>
@@ -363,6 +364,7 @@ const folder = document.querySelector<HTMLElement>('#folder');
 const gift = document.querySelector<HTMLElement>('#gift');
 const openFileButton = document.querySelector<HTMLButtonElement>('#open-file');
 const permitSection = document.querySelector<HTMLElement>('#permit-section');
+const permitPrinter = document.querySelector<HTMLElement>('#permit-printer');
 const decisionFile = document.querySelector<HTMLElement>('#decision-file');
 const decisionMessage = document.querySelector<HTMLElement>('#decision-message');
 const decisionActions = document.querySelector<HTMLElement>('#decision-actions');
@@ -428,6 +430,14 @@ function revealPage(page?: HTMLElement) {
   });
 }
 
+function startPermitPrinter() {
+  if (!permitPrinter) return;
+  permitPrinter.classList.remove('is-printing');
+  window.requestAnimationFrame(() => {
+    window.requestAnimationFrame(() => permitPrinter.classList.add('is-printing'));
+  });
+}
+
 function renderPageNavigation() {
   const pages = availablePages();
   currentPageIndex = Math.max(0, Math.min(currentPageIndex, pages.length - 1));
@@ -451,6 +461,7 @@ function goToPage(index: number, behavior: ScrollBehavior = 'smooth') {
   pageDeck.scrollTo({ left: pages[currentPageIndex].offsetLeft, behavior });
   pages[currentPageIndex].scrollTo({ top: 0, behavior: 'auto' });
   renderPageNavigation();
+  if (pages[currentPageIndex].dataset.page === 'permit') startPermitPrinter();
 }
 
 function goToSection(section: string, behavior: ScrollBehavior = 'auto') {
@@ -528,7 +539,7 @@ function showApprovedState(response: PermitResponse, navigate = false) {
   const approvalDate = document.querySelector<HTMLElement>('#approval-date');
   if (approvalDate) approvalDate.textContent = `${strings.approvedAt} ${new Intl.DateTimeFormat(dateLocale, { dateStyle: 'medium' }).format(new Date(response.respondedAt))}`;
   renderPageNavigation();
-  if (navigate) window.setTimeout(() => goToPage(availablePages().length - 1), 780);
+  if (navigate) window.setTimeout(() => goToPage(availablePages().length - 1, isStorefrontDemo ? 'auto' : 'smooth'), 780);
 }
 
 async function restoreResponse() {
