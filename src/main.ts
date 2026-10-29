@@ -20,7 +20,10 @@ import { themes } from './themes';
 const pageParams = new URLSearchParams(window.location.search);
 const studioPreviewId = pageParams.get('studioPreview');
 const publishedGiftId = pageParams.get('gift');
-const isStorefrontDemo = pageParams.get('demo') === '1';
+// Storefront previews run inside an iframe. Keep the explicit flag, but also
+// detect the iframe so an older cached storefront bundle cannot accidentally
+// restore a recipient's persisted approval inside the public product demo.
+const isStorefrontDemo = pageParams.get('demo') === '1' || window.parent !== window;
 const storedProjectKey = studioPreviewId
   ? `izin-main:studio-preview:${studioPreviewId}`
   : publishedGiftId
