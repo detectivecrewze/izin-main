@@ -18,12 +18,17 @@ import { formatGiftDate, getGiftDateParts, safeExternalUrl, safeMediaUrl, valida
 import { themes } from './themes';
 
 const pageParams = new URLSearchParams(window.location.search);
+const defaultPublicGiftId = 'permit-mvtsxc97-bf660969';
 const studioPreviewId = pageParams.get('studioPreview');
-const publishedGiftId = pageParams.get('gift');
+const explicitPublishedGiftId = pageParams.get('gift');
+const isDefaultPublicGift = !studioPreviewId && !explicitPublishedGiftId;
+const publishedGiftId = explicitPublishedGiftId ?? (isDefaultPublicGift ? defaultPublicGiftId : null);
 // Storefront previews run inside an iframe. Keep the explicit flag, but also
 // detect the iframe so an older cached storefront bundle cannot accidentally
 // restore a recipient's persisted approval inside the public product demo.
-const isStorefrontDemo = pageParams.get('demo') === '1' || window.parent !== window;
+// The root-domain showcase uses the curated KV project too, but remains
+// replayable and never writes a recipient response.
+const isStorefrontDemo = pageParams.get('demo') === '1' || window.parent !== window || isDefaultPublicGift;
 const storedProjectKey = studioPreviewId
   ? `izin-main:studio-preview:${studioPreviewId}`
   : publishedGiftId
@@ -41,7 +46,9 @@ function readStoredProject(key?: string): IzinMainProject | undefined {
 }
 
 let usesRemoteGift = false;
-let projectSource = readStoredProject(storedProjectKey);
+// Always fetch the root showcase from KV so it cannot be shadowed by an older
+// locally cached copy of the same curated project.
+let projectSource = isDefaultPublicGift ? undefined : readStoredProject(storedProjectKey);
 if (!projectSource && publishedGiftId) {
   try {
     projectSource = (await loadPublicGift(publishedGiftId)).project;
@@ -57,7 +64,7 @@ const requestedTheme = pageParams.get('theme');
 // Theme query parameters are only a storefront-demo convenience. A published
 // customer gift and a Studio preview must always honor the theme saved in the
 // project rather than allowing the URL to override it.
-if (!publishedGiftId && !studioPreviewId && requestedTheme && requestedTheme in themes) project.theme = requestedTheme as ThemeId;
+if (isStorefrontDemo && requestedTheme && requestedTheme in themes) project.theme = requestedTheme as ThemeId;
 const strings = getCopy(project.locale);
 const ui = getGiftUi(project.locale);
 const dateLocale = project.locale === 'id' ? 'id-ID' : 'en-US';
