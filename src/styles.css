@@ -862,6 +862,7 @@ body.gift-open { overflow: hidden; }
 .person-card--recipient { transform: rotate(2deg); }
 .person-card__photo { aspect-ratio: .82; overflow: hidden; background: var(--dark); display: grid; place-items: center; color: var(--paper-2); font: 400 56px "DM Serif Display", serif; }
 .person-card__photo img { width: 100%; height: 100%; object-fit: cover; filter: saturate(.76) sepia(.15); }
+.person-card__photo > span { font: 400 56px "DM Serif Display", serif; }
 .person-card--applicant img { object-position: center; transform: scale(1.32); transform-origin: 25% 48%; }
 .person-card--recipient img { object-position: center; transform: scale(2.08); transform-origin: 74% 54%; }
 .person-card figcaption { display: grid; gap: 3px; padding: 11px 3px 0; }

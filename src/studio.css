@@ -270,11 +270,13 @@ svg { width: 1.2em; height: 1.2em; display: block; }
 .preset-dialog__close { position: absolute; z-index: 2; top: 14px; right: 14px; width: 40px; height: 40px; border: 1px solid var(--studio-line); border-radius: 50%; display: grid; place-items: center; background: var(--studio-paper); cursor: pointer; }
 .preset-dialog h2 { margin: 12px 0 6px; font: 400 34px/1 "DM Serif Display", serif; }
 .preset-dialog__paper > p { margin: 0 0 22px; color: var(--studio-muted); font-size: 10px; line-height: 1.6; }
-.preset-compare { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.preset-compare > div { min-width: 0; padding: 14px; border: 1px solid var(--studio-line); background: rgba(255,255,255,.46); }
-.preset-compare > div:last-child { border-color: rgba(163,60,53,.36); background: rgba(163,60,53,.05); }
-.preset-compare span { color: var(--studio-accent); font: 600 7px "IBM Plex Mono", monospace; letter-spacing: .12em; }
-.preset-compare p { margin: 8px 0 0; overflow-wrap: anywhere; font-size: 10px; line-height: 1.55; }
+.preset-change-list { max-height: min(52vh, 470px); padding-right: 4px; display: grid; gap: 10px; overflow: auto; overscroll-behavior: contain; }
+.preset-change-row { min-width: 0; padding: 12px; border: 1px solid var(--studio-line); display: grid; gap: 8px; background: rgba(255,255,255,.46); }
+.preset-change-row > strong { color: var(--studio-dark); font-size: 9px; line-height: 1.4; }
+.preset-change-row > div { min-width: 0; padding: 9px 10px; border-left: 2px solid rgba(37,49,42,.18); display: grid; grid-template-columns: 66px minmax(0,1fr); gap: 10px; background: rgba(37,49,42,.025); }
+.preset-change-row > div:last-child { border-left-color: var(--studio-accent); background: rgba(163,60,53,.055); }
+.preset-change-row span { color: var(--studio-accent); font: 600 7px "IBM Plex Mono", monospace; letter-spacing: .12em; text-transform: uppercase; }
+.preset-change-row p { margin: 0; overflow-wrap: anywhere; white-space: pre-line; font-size: 9px; line-height: 1.55; }
 .preset-dialog__actions { margin-top: 18px; display: flex; justify-content: flex-end; gap: 8px; }
 .preset-dialog__actions button { min-height: 43px; padding: 0 15px; border: 1px solid var(--studio-line); display: inline-flex; align-items: center; gap: 8px; background: var(--studio-paper); cursor: pointer; font-size: 9px; font-weight: 700; }
 .preset-dialog__actions button:last-child { color: var(--studio-paper); border-color: var(--studio-accent); background: var(--studio-accent); }
@@ -350,7 +352,8 @@ svg { width: 1.2em; height: 1.2em; display: block; }
   .studio-preview__screen { height: calc(100% - max(64px, calc(env(safe-area-inset-top) + 54px))); }
   .studio-preview iframe { width: 100%; }
   .preset-dialog__paper { padding: 31px 21px 24px; }
-  .preset-compare { grid-template-columns: 1fr; }
+  .preset-change-list { max-height: min(54vh, 430px); }
+  .preset-change-row > div { grid-template-columns: 1fr; gap: 5px; }
   .preset-dialog__actions button { flex: 1; justify-content: center; }
   .publish-result__actions > * { flex: 1 1 calc(50% - 8px); justify-content: center; }
   .studio-language-gate { padding: 14px; align-items: center; }

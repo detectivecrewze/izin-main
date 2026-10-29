@@ -4,7 +4,7 @@ Izin Main adalah gift digital self-edit berbentuk permohonan pergi yang personal
 
 ## Status proyek
 
-**Fase 3 — Worker, storage, dan admin internal telah diimplementasikan secara lokal.** Gift Pages dan Customer Studio sudah disetujui. Payment, storefront, serta deployment production belum dikerjakan dan tetap menunggu instruksi owner.
+**Fase 4 — integrasi penjualan sudah diimplementasikan dan diverifikasi secara lokal.** Gift Pages, Customer Studio, Worker, admin internal, integrasi `pakasir-sandbox`, dan halaman storefront Izin Main sudah tersedia. Deployment sandbox, port ke `pakasir-gateway` production, serta deployment storefront/Worker production tetap menunggu izin eksplisit owner.
 
 Urutan pengerjaan yang wajib:
 
@@ -62,10 +62,24 @@ Salin `.dev.vars.example` menjadi `.dev.vars` dan gunakan token lokal. Vite mene
 
 ## Konfigurasi Worker
 
-- Secret wajib: `ADMIN_TOKEN`
+- Secret wajib: `ADMIN_TOKEN` dan `ORDER_INGEST_SECRET`
 - Binding KV: `IZIN_MAIN_KV`
 - Binding R2: `MEDIA`, bucket `valentine-upload`
 - Prefix media: `izin-main/{projectId}/`
 - Vars: `ALLOWED_ORIGINS`, `PUBLIC_APP_URL`, dan `PUBLIC_API_URL`
 
 ID namespace pada `wrangler.toml` masih placeholder lokal. Jangan deploy sebelum ID KV, URL production, origin production, serta secret sudah diisi dan owner memberi izin eksplisit.
+
+## Integrasi Phase 4
+
+Worker menyediakan `POST /api/integrations/orders` untuk gateway pembayaran. Endpoint ini memakai Bearer `ORDER_INGEST_SECRET`, menyimpan `order:{orderId}`, dan membuat tepat satu project berdasarkan idempotency key `${orderId}:izin-main`. Respons mengembalikan `studioUrl` customer dan aman dipanggil ulang tanpa membuat project ganda.
+
+Implementasi sandbox berada di `pakasir-sandbox` dengan SKU `izin-main` seharga **Rp15.000**. Produk tetap self-edit: setelah pembayaran terverifikasi, customer menerima link Studio melalui email dan halaman order status. Storefront lokal sudah memiliki `/catalog/izin-main`, demo dua tema, Gift Finder, sales count, sitemap, metadata, dan screenshot showcase Gift Pages asli.
+
+Verifikasi lokal 29 Oktober 2026:
+
+- Izin Main `npm run check`: 10/10 test lulus, Worker typecheck lulus, production build lulus.
+- pakasir-sandbox `npm test`: 50/50 test lulus.
+- storefront lint: 0 error (warning lama tetap ada).
+- storefront production build: lulus dan `/catalog/izin-main` diprerender.
+- uji integrasi langsung sandbox module → Worker lokal: satu order menghasilkan satu project/Studio URL dan panggilan kedua memakai project yang sama.

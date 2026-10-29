@@ -25,12 +25,17 @@ interface PlaylistSong {
   audioName?: string;
 }
 
-interface PresetPayload {
-  title: string;
-  description: string;
+interface PresetChange {
+  label: string;
   before: string;
   after: string;
   apply: () => void;
+}
+
+interface PresetPayload {
+  title: string;
+  description: string;
+  changes: PresetChange[];
 }
 
 const app = document.querySelector<HTMLDivElement>('#app')!;
@@ -94,6 +99,7 @@ function loadDraft(): IzinMainProject {
 
 let project = loadDraft();
 project.headings ??= defaultHeadings(project.locale);
+syncDefaultOpeningHeadings();
 let remotePublished = false;
 let remoteGiftUrl = '';
 let recipientResponse: import('./project').PermitResponse | null = null;
@@ -110,7 +116,7 @@ let uploadAudioUrl = project.music?.audioUrl.startsWith('blob:') ? project.music
 let previewAudio: HTMLAudioElement | undefined;
 
 const makeSteps = () => [
-  { label: `${c().openingStep} & ${c().partiesStep}`, short: c().partiesShort, section: 'gate-title' },
+  { label: c().partiesStep, short: c().partiesShort, section: 'parties-title' },
   { label: `${c().summaryStep} & ${c().planStep}`, short: c().planShort, section: 'summary-title' },
   { label: c().commitmentsStep, short: c().commitmentsShort, section: 'commitment-title' },
   { label: c().noteStep, short: c().noteShort, section: 'defense-title' },
@@ -137,6 +143,7 @@ async function bootstrapStudio() {
       const payload = await loadStudioProject(projectId, accessToken);
       project = payload.project;
       project.headings ??= defaultHeadings(project.locale);
+      syncDefaultOpeningHeadings();
       recipientResponse = payload.response;
       remotePublished = payload.status === 'Published' || payload.status === 'Disetujui';
       remoteGiftUrl = payload.giftUrl || '';
@@ -195,9 +202,17 @@ function changeStudioLocale(nextLocale: Locale) {
   if (previousLocale !== nextLocale) translatePresetBackedContent(previousLocale, nextLocale);
   uiLocale = nextLocale;
   project.locale = nextLocale;
+  syncDefaultOpeningHeadings();
   steps = makeSteps();
   document.documentElement.lang = nextLocale;
   localStorage.setItem(studioLanguageKey, nextLocale);
+}
+
+function syncDefaultOpeningHeadings() {
+  project.headings ??= defaultHeadings(project.locale);
+  const giftUi = getGiftUi(project.locale);
+  project.headings.openingTitle = giftUi.gateTitle;
+  project.headings.openingEmphasis = giftUi.gateEmphasis;
 }
 
 function requestTitlePresets(locale: Locale) {
@@ -291,8 +306,9 @@ function localizedDefaults(locale: Locale) {
 function translatePresetBackedContent(from: Locale, to: Locale) {
   if (from === to) return;
   project.headings ??= defaultHeadings(from);
-  const oldHeadingSets = [defaultHeadings(from), demoHeadings(from), headingPreset('playful', from), headingPreset('warm', from), headingPreset('official', from)];
-  const newHeadingSets = [defaultHeadings(to), demoHeadings(to), headingPreset('playful', to), headingPreset('warm', to), headingPreset('official', to)];
+  const tones: PresetTone[] = ['playful', 'warm', 'official', 'formal'];
+  const oldHeadingSets = [defaultHeadings(from), demoHeadings(from), ...tones.map((tone) => headingPreset(tone, from))];
+  const newHeadingSets = [defaultHeadings(to), demoHeadings(to), ...tones.map((tone) => headingPreset(tone, to))];
   (Object.keys(project.headings) as Array<keyof NonNullable<IzinMainProject['headings']>>).forEach((key) => {
     const match = oldHeadingSets.findIndex((set) => set[key] === project.headings![key]);
     if (match >= 0) project.headings![key] = newHeadingSets[match][key];
@@ -311,6 +327,28 @@ function translatePresetBackedContent(from: Locale, to: Locale) {
   const oldNotes = notePresets(from);
   const newNotes = notePresets(to);
   project.defenseNote = replaceKnown(project.defenseNote, Object.values(oldNotes), Object.values(newNotes));
+
+  const oldPackages = tones.map((tone) => sectionPresetCopy(from, tone));
+  const newPackages = tones.map((tone) => sectionPresetCopy(to, tone));
+  const swapPackageField = <K extends Exclude<keyof SectionPresetCopy, 'commitments'>>(value: string | undefined, key: K) => {
+    const match = oldPackages.findIndex((bundle) => bundle[key] === value);
+    return match >= 0 ? newPackages[match][key] : value;
+  };
+  project.request.title = swapPackageField(project.request.title, 'requestTitle') || project.request.title;
+  project.applicant.role = swapPackageField(project.applicant.role, 'applicantRole');
+  project.applicant.intro = swapPackageField(project.applicant.intro, 'applicantIntro');
+  project.request.note = swapPackageField(project.request.note, 'planNote');
+  project.defenseNote = swapPackageField(project.defenseNote, 'defenseNote') || project.defenseNote;
+  project.decision.eyebrow = swapPackageField(project.decision.eyebrow, 'decisionEyebrow');
+  project.decision.question = swapPackageField(project.decision.question, 'decisionQuestion') || project.decision.question;
+  project.decision.approvedLabel = swapPackageField(project.decision.approvedLabel, 'decisionLabel') || project.decision.approvedLabel;
+  project.decision.approvedMessage = swapPackageField(project.decision.approvedMessage, 'approvedMessage') || project.decision.approvedMessage;
+  project.card.title = swapPackageField(project.card.title, 'cardTitle') || project.card.title;
+  project.card.footer = swapPackageField(project.card.footer, 'cardFooter');
+  project.commitments.forEach((item, index) => {
+    const match = oldPackages.findIndex((bundle) => bundle.commitments[index] === item.text);
+    if (match >= 0) item.text = newPackages[match].commitments[index] || item.text;
+  });
 
   const oldDefaults = localizedDefaults(from);
   const newDefaults = localizedDefaults(to);
@@ -392,10 +430,7 @@ function mountStudio() {
         <span class="studio-kicker">${c().confirmPreset}</span>
         <h2 id="preset-title">${c().usePresetQuestion}</h2>
         <p id="preset-description"></p>
-        <div class="preset-compare">
-          <div><span>${c().previousValue}</span><p id="preset-before"></p></div>
-          <div><span>${c().nextValue}</span><p id="preset-after"></p></div>
-        </div>
+        <div class="preset-change-list" id="preset-changes"></div>
         <div class="preset-dialog__actions">
           <button type="button" data-close-preset>${c().cancel}</button>
           <button type="button" id="apply-preset">${c().applyPreset} ${icon('arrow')}</button>
@@ -404,7 +439,7 @@ function mountStudio() {
     </dialog>`;
 
   bindShellEvents();
-  renderStep();
+  renderStep({ moveToTop: true });
   void loadPlaylist();
 }
 
@@ -419,7 +454,7 @@ function renderSteps() {
   nav.querySelectorAll<HTMLButtonElement>('[data-step]').forEach((button) => {
     button.addEventListener('click', () => {
       currentStep = Number(button.dataset.step);
-      renderStep();
+      renderStep({ moveToTop: true });
     });
   });
 }
@@ -440,16 +475,17 @@ function textarea(label: string, path: string, value: string, options: { placeho
 
 function photoUpload(kind: 'applicant' | 'recipient', label: string, name: string, photoUrl?: string) {
   return `<div class="photo-upload">
-    <div class="photo-upload__preview">${photoUrl ? `<img src="${escapeHtml(photoUrl)}" alt="Preview ${escapeHtml(label)}" />` : `<span>${escapeHtml(name.slice(0, 1) || '?')}</span>`}</div>
+    <div class="photo-upload__preview">${photoUrl ? `<img src="${escapeHtml(photoUrl)}" alt="Preview ${escapeHtml(label)}" onerror="this.hidden=true;this.nextElementSibling.hidden=false" /><span hidden>${escapeHtml(name.slice(0, 1) || '?')}</span>` : `<span>${escapeHtml(name.slice(0, 1) || '?')}</span>`}</div>
     <div><strong>${label}</strong><p>${c().photoOptional}</p>
       <label class="file-button">${icon('image')}<span>${photoUrl ? c().changePhoto : c().choosePhoto}</span><input type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" data-photo="${kind}" /></label>
     </div>
   </div>`;
 }
 
-type HeadingSection = 'opening' | 'summary' | 'parties' | 'plan' | 'commitments' | 'defense' | 'decision' | 'ending';
+type HeadingSection = 'summary' | 'parties' | 'plan' | 'commitments' | 'defense' | 'decision' | 'ending';
+type PresetTone = 'playful' | 'warm' | 'official' | 'formal';
 
-const headingFields: Record<Exclude<HeadingSection, 'opening'>, keyof NonNullable<IzinMainProject['headings']>> = {
+const headingFields: Record<HeadingSection, keyof NonNullable<IzinMainProject['headings']>> = {
   summary: 'summaryTitle',
   parties: 'partiesTitle',
   plan: 'planTitle',
@@ -461,7 +497,6 @@ const headingFields: Record<Exclude<HeadingSection, 'opening'>, keyof NonNullabl
 
 function sectionTitleEditor(section: HeadingSection) {
   const descriptions: Record<HeadingSection, string> = {
-    opening: c().openingHeadingDescription,
     summary: c().summaryHeadingDescription,
     parties: c().partiesHeadingDescription,
     plan: c().planHeadingDescription,
@@ -470,23 +505,17 @@ function sectionTitleEditor(section: HeadingSection) {
     decision: c().decisionHeadingDescription,
     ending: c().endingHeadingDescription,
   };
-  const inputFields = section === 'opening'
-    ? `<div class="field-grid">
-        ${field(c().openingTitleLine, 'headings.openingTitle', project.headings!.openingTitle, { placeholder: uiLocale === 'id' ? 'Permohonan' : 'Official Request', required: true })}
-        ${field(c().openingHighlight, 'headings.openingEmphasis', project.headings!.openingEmphasis, { placeholder: uiLocale === 'id' ? 'Izin Main' : 'Going-Out Permit', required: true })}
-      </div>`
-    : field(c().sectionTitle, `headings.${headingFields[section]}`, project.headings![headingFields[section]], { required: true });
-
   return `<fieldset class="choice-fieldset section-title-card">
     <legend>${c().sectionTitle}</legend>
     <p>${descriptions[section]}</p>
     <div class="section-title-card__presets">
       <span>${icon('spark')} ${c().choosePreset}</span>
-      <button type="button" data-section-heading-preset="${section}:playful">${c().playful}</button>
-      <button type="button" data-section-heading-preset="${section}:warm">${c().warm}</button>
-      <button type="button" data-section-heading-preset="${section}:official">${c().officialFunny}</button>
+      <button type="button" data-section-preset="${section}:playful">${c().playful}</button>
+      <button type="button" data-section-preset="${section}:warm">${c().warm}</button>
+      <button type="button" data-section-preset="${section}:official">${c().officialFunny}</button>
+      <button type="button" data-section-preset="${section}:formal">${c().formal}</button>
     </div>
-    ${inputFields}
+    ${field(c().sectionTitle, `headings.${headingFields[section]}`, project.headings![headingFields[section]], { required: true })}
     <small class="section-title-card__hint">${c().presetEditableHint}</small>
   </fieldset>`;
 }
@@ -494,10 +523,7 @@ function sectionTitleEditor(section: HeadingSection) {
 function renderStepContent() {
   if (currentStep === 0) return `
     <div class="form-section">
-      <div class="form-section__title"><span>01</span><div><h2>${c().openingEditorTitle}</h2><p>${c().openingEditorText}</p></div></div>
-      ${sectionTitleEditor('opening')}
-      ${field(c().fileNumber, 'requestNumber', project.requestNumber, { placeholder: 'IM/1411/ADIT-07', hint: c().fileNumberHint })}
-      <div class="form-section__title form-section__title--continued"><span>A</span><div><h2>${c().partiesEditorTitle}</h2><p>${c().partiesEditorText}</p></div></div>
+      <div class="form-section__title"><span>01</span><div><h2>${c().partiesEditorTitle}</h2><p>${c().partiesEditorText}</p></div></div>
       ${sectionTitleEditor('parties')}
       <div class="photo-grid">
         ${photoUpload('applicant', c().applicantPhoto, project.applicant.name, project.applicant.photoUrl)}
@@ -505,12 +531,11 @@ function renderStepContent() {
       </div>
       <div class="field-grid">
         ${field(c().applicantName, 'applicant.name', project.applicant.name, { placeholder: uiLocale === 'id' ? 'Contoh: Adit Pranata' : 'Example: Adit Pranata', required: true })}
-        ${field(c().applicantNickname, 'applicant.nickname', project.applicant.nickname || '', { placeholder: uiLocale === 'id' ? 'Contoh: Adit' : 'Example: Adit' })}
         ${field(c().recipientName, 'recipient.name', project.recipient.name, { placeholder: uiLocale === 'id' ? 'Contoh: Nara Putri' : 'Example: Nara Putri', required: true })}
+        ${field(c().applicantNickname, 'applicant.nickname', project.applicant.nickname || '', { placeholder: uiLocale === 'id' ? 'Contoh: Adit' : 'Example: Adit' })}
         ${field(c().recipientNickname, 'recipient.nickname', project.recipient.nickname || '', { placeholder: uiLocale === 'id' ? 'Contoh: Nara' : 'Example: Nara' })}
       </div>
       ${field(c().applicantRole, 'applicant.role', project.applicant.role || '', { placeholder: uiLocale === 'id' ? 'Contoh: pacarmu yang tetap ingat waktu' : 'Example: your partner who will keep you updated', hint: c().applicantRoleHint })}
-      <div class="preset-row"><span>${c().introPresets}</span><button type="button" data-intro-preset="sweet">${c().sweet}</button><button type="button" data-intro-preset="funny">${c().funny}</button></div>
       ${textarea(c().intro, 'applicant.intro', project.applicant.intro || '', { placeholder: uiLocale === 'id' ? 'Ceritakan singkat kenapa kamu membuat berkas ini…' : 'Briefly share why you made this little file…', hint: c().introHint, maxlength: 320 })}
     </div>`;
 
@@ -518,7 +543,6 @@ function renderStepContent() {
     <div class="form-section">
       <div class="form-section__title"><span>02</span><div><h2>${c().summaryEditorTitle}</h2><p>${c().summaryEditorText}</p></div></div>
       ${sectionTitleEditor('summary')}
-      <div class="preset-row"><span>${c().requestTitlePresets}</span><button type="button" data-title-preset="serious">${c().seriousFunny}</button><button type="button" data-title-preset="short">${c().short}</button><button type="button" data-title-preset="sweet">${c().sweet}</button></div>
       ${field(c().requestTitle, 'request.title', project.request.title, { placeholder: uiLocale === 'id' ? 'Contoh: Nongkrong sebentar, pulang tetap sayang' : 'Example: Out for a while, home with a smile', required: true, hint: c().requestTitleHint })}
       <div class="form-section__title form-section__title--continued"><span>B</span><div><h2>${c().planEditorTitle}</h2><p>${c().planEditorText}</p></div></div>
       ${sectionTitleEditor('plan')}
@@ -550,7 +574,6 @@ function renderStepContent() {
     <div class="form-section">
       <div class="form-section__title"><span>04</span><div><h2>${c().noteEditorTitle}</h2><p>${c().noteEditorText}</p></div></div>
       ${sectionTitleEditor('defense')}
-      <div class="preset-row"><span>${c().messagePresets}</span><button type="button" data-note-preset="sweet">${c().sweet}</button><button type="button" data-note-preset="funny">${c().funny}</button><button type="button" data-note-preset="direct">${c().direct}</button></div>
       ${textarea(c().applicantMessage, 'defenseNote', project.defenseNote, { placeholder: uiLocale === 'id' ? 'Tulis alasan jujurmu dan bagaimana kamu akan menjaga kepercayaan…' : 'Share your honest reason and how you will keep their trust…', hint: c().applicantMessageHint, maxlength: 500, required: true })}
     </div>`;
 
@@ -626,7 +649,8 @@ function renderPlaylist() {
   }).join('');
 }
 
-function renderStep() {
+function renderStep(options: { moveToTop?: boolean } = {}) {
+  const previousScrollY = window.scrollY;
   renderSteps();
   const heading = document.querySelector<HTMLElement>('#studio-heading');
   const form = document.querySelector<HTMLFormElement>('#studio-form');
@@ -645,7 +669,9 @@ function renderStep() {
   }
   renderSideSummary();
   if (currentStep === steps.length - 1 && (isDemoAccess ? localStorage.getItem(publishedKey) : remotePublished)) void renderPublishBarcode();
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  window.requestAnimationFrame(() => {
+    window.scrollTo({ top: options.moveToTop ? 0 : previousScrollY, behavior: options.moveToTop ? 'smooth' : 'auto' });
+  });
 }
 
 function bindShellEvents() {
@@ -657,16 +683,16 @@ function bindShellEvents() {
     mountStudio();
   }));
   document.querySelector<HTMLButtonElement>('#step-back')?.addEventListener('click', () => {
-    if (currentStep > 0) { currentStep -= 1; renderStep(); }
+    if (currentStep > 0) { currentStep -= 1; renderStep({ moveToTop: true }); }
   });
   document.querySelector<HTMLButtonElement>('#step-next')?.addEventListener('click', () => {
-    if (currentStep < steps.length - 1) { currentStep += 1; renderStep(); }
+    if (currentStep < steps.length - 1) { currentStep += 1; renderStep({ moveToTop: true }); }
   });
   document.querySelectorAll<HTMLButtonElement>('[data-preview]').forEach((button) => button.addEventListener('click', openPreview));
   document.querySelectorAll<HTMLButtonElement>('[data-close-preview]').forEach((button) => button.addEventListener('click', () => document.querySelector<HTMLDialogElement>('#preview-dialog')?.close()));
   document.querySelectorAll<HTMLButtonElement>('[data-close-preset]').forEach((button) => button.addEventListener('click', () => document.querySelector<HTMLDialogElement>('#preset-dialog')?.close()));
   document.querySelector<HTMLButtonElement>('#apply-preset')?.addEventListener('click', () => {
-    presetPayload?.apply();
+    presetPayload?.changes.forEach((change) => change.apply());
     document.querySelector<HTMLDialogElement>('#preset-dialog')?.close();
     queueSave();
     renderStep();
@@ -705,12 +731,9 @@ function bindFormEvents(form: HTMLFormElement) {
   form.querySelectorAll<HTMLButtonElement>('[data-song]').forEach((button) => button.addEventListener('click', () => selectSong(Number(button.dataset.song))));
   form.querySelectorAll<HTMLButtonElement>('[data-play-song]').forEach((button) => button.addEventListener('click', () => toggleSongPreview(Number(button.dataset.playSong), button)));
 
-  form.querySelectorAll<HTMLButtonElement>('[data-title-preset]').forEach((button) => button.addEventListener('click', () => openTitlePreset(button.dataset.titlePreset!)));
-  form.querySelectorAll<HTMLButtonElement>('[data-intro-preset]').forEach((button) => button.addEventListener('click', () => openIntroPreset(button.dataset.introPreset!)));
-  form.querySelectorAll<HTMLButtonElement>('[data-note-preset]').forEach((button) => button.addEventListener('click', () => openNotePreset(button.dataset.notePreset!)));
-  form.querySelectorAll<HTMLButtonElement>('[data-section-heading-preset]').forEach((button) => button.addEventListener('click', () => {
-    const [section, tone] = button.dataset.sectionHeadingPreset!.split(':') as [HeadingSection, string];
-    openSectionHeadingPreset(section, tone);
+  form.querySelectorAll<HTMLButtonElement>('[data-section-preset]').forEach((button) => button.addEventListener('click', () => {
+    const [section, tone] = button.dataset.sectionPreset!.split(':') as [HeadingSection, PresetTone];
+    openSectionPreset(section, tone);
   }));
 
   form.querySelector<HTMLButtonElement>('#publish-button')?.addEventListener('click', publishGift);
@@ -794,7 +817,7 @@ async function loadPlaylist() {
     const response = await fetch('/playlist.json');
     if (!response.ok) throw new Error('Playlist unavailable');
     playlist = await response.json() as PlaylistSong[];
-    if (currentStep === 8) renderStep();
+    if (currentStep === 5) renderStep();
   } catch {
     const grid = document.querySelector<HTMLElement>('#playlist-grid');
     if (grid) grid.innerHTML = `<p class="playlist-loading">${c().playlistFailed}</p>`;
@@ -880,39 +903,6 @@ async function compressImage(file: File): Promise<{ blob: Blob; dataUrl: string 
   return { blob, dataUrl: canvas.toDataURL('image/webp', .78) };
 }
 
-function openTitlePreset(tone: string) {
-  const values: Record<string, string> = requestTitlePresets(project.locale);
-  openPreset({
-    title: c().replaceRequestTitle,
-    description: c().replaceRequestTitleText,
-    before: project.request.title,
-    after: values[tone],
-    apply: () => { project.request.title = values[tone]; },
-  });
-}
-
-function openIntroPreset(tone: string) {
-  const values: Record<string, string> = introPresets(project.locale);
-  openPreset({
-    title: c().replaceIntro,
-    description: c().replaceIntroText,
-    before: project.applicant.intro || c().noIntro,
-    after: values[tone],
-    apply: () => { project.applicant.intro = values[tone]; },
-  });
-}
-
-function openNotePreset(tone: string) {
-  const values: Record<string, string> = notePresets(project.locale);
-  openPreset({
-    title: c().replaceNote,
-    description: c().replaceNoteText,
-    before: project.defenseNote,
-    after: values[tone],
-    apply: () => { project.defenseNote = values[tone]; },
-  });
-}
-
 function defaultHeadings(locale: Locale): NonNullable<IzinMainProject['headings']> {
   const ui = getGiftUi(locale);
   return {
@@ -928,7 +918,7 @@ function defaultHeadings(locale: Locale): NonNullable<IzinMainProject['headings'
   };
 }
 
-function headingPreset(tone: string, locale: Locale): NonNullable<IzinMainProject['headings']> {
+function headingPreset(tone: PresetTone, locale: Locale): NonNullable<IzinMainProject['headings']> {
   const id: Record<string, NonNullable<IzinMainProject['headings']>> = {
     playful: {
       openingTitle: 'Berkas Rahasia', openingEmphasis: 'Mau Main', summaryTitle: 'Aku punya rencana.\nKali ini lengkap, kok.', partiesTitle: 'Yang pergi & yang pegang stempel.', planTitle: 'Biar nggak ada jawaban “lihat nanti”.', commitmentsTitle: 'Janji yang nggak cuma jadi wacana.', defenseTitle: 'Pembelaan singkat dari tersangka.', decisionTitle: 'Satu stempel sebelum aku berangkat.', endingTitle: 'Operasi main resmi disetujui.',
@@ -938,6 +928,9 @@ function headingPreset(tone: string, locale: Locale): NonNullable<IzinMainProjec
     },
     official: {
       openingTitle: 'Permohonan Resmi', openingEmphasis: 'Izin Main', summaryTitle: 'Ringkasan pengajuan\nyang sangat serius.', partiesTitle: 'Pemohon dan pejabat pemberi stempel.', planTitle: 'Lampiran rencana perjalanan singkat.', commitmentsTitle: 'Pernyataan tanggung jawab pemohon.', defenseTitle: 'Nota pembelaan yang jujur.', decisionTitle: 'Meja persetujuan akhir.', endingTitle: 'Surat izin resmi telah diterbitkan.',
+    },
+    formal: {
+      openingTitle: 'Dokumen Permohonan', openingEmphasis: 'Izin Kegiatan', summaryTitle: 'Ringkasan permohonan\nkegiatan di luar.', partiesTitle: 'Identitas pihak pemohon dan penerima.', planTitle: 'Rincian jadwal dan rencana kegiatan.', commitmentsTitle: 'Pernyataan komitmen dan tanggung jawab.', defenseTitle: 'Keterangan tambahan dari pemohon.', decisionTitle: 'Lembar persetujuan permohonan.', endingTitle: 'Surat persetujuan telah diterbitkan.',
     },
   };
   const en: Record<string, NonNullable<IzinMainProject['headings']>> = {
@@ -950,15 +943,153 @@ function headingPreset(tone: string, locale: Locale): NonNullable<IzinMainProjec
     official: {
       openingTitle: 'Official Request', openingEmphasis: 'Going-Out Permit', summaryTitle: 'A very serious\nrequest summary.', partiesTitle: 'The applicant and official stamp holder.', planTitle: 'Attached short-trip itinerary.', commitmentsTitle: 'Applicant responsibility statement.', defenseTitle: 'An honest defense memorandum.', decisionTitle: 'Final approval desk.', endingTitle: 'The official permit has been issued.',
     },
+    formal: {
+      openingTitle: 'Application Document', openingEmphasis: 'Activity Permit', summaryTitle: 'Summary of the\nactivity application.', partiesTitle: 'Applicant and recipient identification.', planTitle: 'Schedule and activity plan details.', commitmentsTitle: 'Statement of commitment and responsibility.', defenseTitle: 'Additional applicant statement.', decisionTitle: 'Application approval sheet.', endingTitle: 'The approval document has been issued.',
+    },
   };
   return (locale === 'en' ? en : id)[tone] || defaultHeadings(locale);
 }
 
-function openSectionHeadingPreset(section: HeadingSection, tone: string) {
+interface SectionPresetCopy {
+  requestTitle: string;
+  applicantRole: string;
+  applicantIntro: string;
+  planNote: string;
+  commitments: string[];
+  defenseNote: string;
+  decisionEyebrow: string;
+  decisionQuestion: string;
+  decisionLabel: string;
+  approvedMessage: string;
+  cardTitle: string;
+  cardFooter: string;
+}
+
+function sectionPresetCopy(locale: Locale, tone: PresetTone): SectionPresetCopy {
+  const id: Record<PresetTone, SectionPresetCopy> = {
+    playful: {
+      requestTitle: 'Operasi main sebentar, pulang bawa cerita',
+      applicantRole: 'tersangka utama yang sudah menyiapkan alibi lengkap',
+      applicantIntro: 'Daripada cuma bilang “nanti aku kabari”, kali ini aku datang membawa berkas, rencana, dan niat baik yang hampir resmi.',
+      planNote: 'Kalau rencana berubah, aku kabari dulu. Tidak ada adegan menghilang lalu muncul dengan chat “hehe”.',
+      commitments: ['Kasih kabar begitu sampai', 'HP tidak mendadak berubah jadi batu', 'Izin dulu sebelum pindah tempat', 'Pulang sesuai jam yang disepakati', 'Besok tetap ada waktu khusus buat kita'],
+      defenseNote: 'Aku cuma mau recharge sebentar bareng teman-teman. Tenang, aku tetap bisa dihubungi, bakal kasih kabar, dan pulang bawa cerita—bukan alasan baru.',
+      decisionEyebrow: 'Seluruh alibi dan lampiran sudah dibaca dengan penuh kasih',
+      decisionQuestion: 'Jadi… tersangka boleh main sebentar?',
+      decisionLabel: 'Stempel: Disetujui',
+      approvedMessage: 'Stempel sudah turun! Semua janji di dalam berkas ini tetap berlaku sampai pemohon pulang.',
+      cardTitle: 'Surat Izin Main Resmi (Banget)',
+      cardFooter: 'Sah selama kabar tetap jalan, waktu tetap diingat, dan cerita dibawa pulang.',
+    },
+    warm: {
+      requestTitle: 'Pergi sebentar, tetap pulang kepadamu',
+      applicantRole: 'orang yang ingin pergi tanpa membuatmu khawatir',
+      applicantIntro: 'Aku membuat berkas kecil ini supaya kamu tahu seluruh rencanaku dan tetap merasa tenang selama aku pergi.',
+      planNote: 'Kalau ada perubahan apa pun, kamu akan jadi orang pertama yang aku kabari.',
+      commitments: ['Aku akan memberi kabar setelah sampai', 'Aku tetap mudah dihubungi', 'Aku akan mengabari jika tempat berubah', 'Aku pulang sesuai waktu yang kita sepakati', 'Aku tetap menyisakan waktu khusus untuk kita'],
+      defenseNote: 'Aku ingin punya waktu sebentar bersama teman-teman, sambil tetap menjaga kepercayaanmu. Aku akan menjaga diri, memberi kabar, dan pulang dengan tenang.',
+      decisionEyebrow: 'Semua rencana sudah kubuka dengan jujur untukmu',
+      decisionQuestion: 'Kalau semuanya sudah terasa tenang, boleh aku pergi sebentar?',
+      decisionLabel: 'Iya, aku percaya',
+      approvedMessage: 'Terima kasih sudah mempercayaiku. Aku akan menjaga semua komitmen yang tertulis di berkas ini.',
+      cardTitle: 'Surat Kepercayaan untuk Pergi Sebentar',
+      cardFooter: 'Dibuat dengan jujur, dijalankan dengan kabar, dan ditutup dengan pulang kepadamu.',
+    },
+    official: {
+      requestTitle: 'Permohonan Izin Main yang Sangat Serius',
+      applicantRole: 'pemohon resmi dengan niat baik dan jadwal yang jelas',
+      applicantIntro: 'Pemohon dengan ini mengajukan izin kegiatan singkat dan melampirkan detail yang diperlukan untuk pertimbangan pejabat pemberi stempel.',
+      planNote: 'Setiap perubahan rencana wajib dilaporkan kepada pejabat pemberi stempel sebelum dilaksanakan.',
+      commitments: ['Melapor setelah tiba di lokasi', 'Menjaga perangkat komunikasi tetap aktif', 'Melapor sebelum berpindah tempat', 'Pulang sesuai estimasi yang disepakati', 'Membawa pulang cerita sebagai laporan akhir'],
+      defenseNote: 'Permohonan diajukan untuk menikmati waktu singkat bersama teman-teman tanpa mengurangi kewajiban memberi kabar, menjaga diri, dan menghormati waktu pulang.',
+      decisionEyebrow: 'Dokumen, alibi, dan lima butir komitmen telah diperiksa',
+      decisionQuestion: 'Apakah permohonan izin main ini layak menerima stempel?',
+      decisionLabel: 'Setujui Berkas',
+      approvedMessage: 'Permohonan resmi disetujui. Pemohon tetap terikat pada seluruh butir komitmen di dalam berkas.',
+      cardTitle: 'Surat Izin Main Resmi',
+      cardFooter: 'Berlaku selama pemohon memberi kabar, menjaga waktu, dan mematuhi seluruh komitmen.',
+    },
+    formal: {
+      requestTitle: 'Permohonan Izin Kegiatan di Luar',
+      applicantRole: 'pihak pemohon',
+      applicantIntro: 'Dokumen ini diajukan untuk menyampaikan rencana kegiatan secara jelas dan lengkap kepada pihak penerima.',
+      planNote: 'Setiap perubahan waktu, tempat, atau susunan kegiatan akan disampaikan kepada penerima sebelum perubahan dilakukan.',
+      commitments: ['Memberikan kabar setelah tiba di lokasi', 'Tetap dapat dihubungi selama kegiatan berlangsung', 'Menyampaikan setiap perubahan rencana', 'Kembali sesuai estimasi yang telah disampaikan', 'Menjaga keselamatan dan kepercayaan penerima'],
+      defenseNote: 'Permohonan ini diajukan dengan itikad baik. Pemohon berkomitmen menjalankan kegiatan secara bertanggung jawab dan mematuhi seluruh informasi yang telah disampaikan.',
+      decisionEyebrow: 'Seluruh informasi dan lampiran telah diperiksa',
+      decisionQuestion: 'Apakah permohonan kegiatan ini dapat disetujui?',
+      decisionLabel: 'Setujui Permohonan',
+      approvedMessage: 'Permohonan telah disetujui. Pemohon tetap berkewajiban menjalankan seluruh komitmen sebagaimana tercantum dalam dokumen.',
+      cardTitle: 'Surat Persetujuan Kegiatan',
+      cardFooter: 'Dokumen berlaku selama informasi, waktu, dan komitmen dilaksanakan sebagaimana diajukan.',
+    },
+  };
+  const en: Record<PresetTone, SectionPresetCopy> = {
+    playful: {
+      requestTitle: 'A short mission, with stories on the way home',
+      applicantRole: 'the main suspect with a fully prepared alibi',
+      applicantIntro: 'Instead of saying “I’ll tell you later”, I brought a file, a plan, and an almost-official amount of good intention.',
+      planNote: 'If the plan changes, I will tell you first. No disappearing act followed by a tiny “hehe”.',
+      commitments: ['Text as soon as I arrive', 'Keep my phone from turning into a brick', 'Ask before moving somewhere else', 'Come home around the agreed time', 'Save special time for us tomorrow'],
+      defenseNote: 'I only want a little recharge time with my friends. I will stay reachable, keep you updated, and come home with stories—not new excuses.',
+      decisionEyebrow: 'Every alibi and attachment has been reviewed with love',
+      decisionQuestion: 'So… may the suspect go out for a while?',
+      decisionLabel: 'Stamp: Approved',
+      approvedMessage: 'The stamp is down! Every promise in this file stays valid until the applicant is home.',
+      cardTitle: 'Very Official Going-Out Permit',
+      cardFooter: 'Valid while updates keep coming, time is respected, and stories come home.',
+    },
+    warm: {
+      requestTitle: 'Out for a while, still coming home to you',
+      applicantRole: 'someone who wants to go without making you worry',
+      applicantIntro: 'I made this little file so you know the whole plan and can feel at ease while I am away.',
+      planNote: 'If anything changes, you will be the first person I tell.',
+      commitments: ['I will let you know when I arrive', 'I will stay easy to reach', 'I will tell you if the venue changes', 'I will be home around our agreed time', 'I will still save special time for us'],
+      defenseNote: 'I want a little time with my friends while still protecting your trust. I will stay safe, keep you updated, and come home peacefully.',
+      decisionEyebrow: 'I have shared every part of the plan honestly with you',
+      decisionQuestion: 'If everything feels reassuring, may I go out for a while?',
+      decisionLabel: 'Yes, I trust you',
+      approvedMessage: 'Thank you for trusting me. I will keep every commitment written in this file.',
+      cardTitle: 'A Little Letter of Trust',
+      cardFooter: 'Made honestly, carried with updates, and completed by coming home to you.',
+    },
+    official: {
+      requestTitle: 'A Very Serious Going-Out Request',
+      applicantRole: 'official applicant with good intentions and a clear schedule',
+      applicantIntro: 'The applicant hereby requests permission for a short activity and attaches the details required for the stamp holder’s consideration.',
+      planNote: 'Any plan change must be reported to the official stamp holder before it takes effect.',
+      commitments: ['Report upon arriving at the venue', 'Keep communication devices active', 'Report before moving to another venue', 'Return around the agreed estimate', 'Bring home stories as the final report'],
+      defenseNote: 'This request is submitted for a short gathering with friends without reducing the obligation to provide updates, stay safe, and respect the return time.',
+      decisionEyebrow: 'The file, alibi, and five commitments have been reviewed',
+      decisionQuestion: 'Does this going-out request deserve an official stamp?',
+      decisionLabel: 'Approve File',
+      approvedMessage: 'The official request is approved. The applicant remains bound by every commitment in this file.',
+      cardTitle: 'Official Going-Out Permit',
+      cardFooter: 'Valid while the applicant provides updates, respects time, and keeps every commitment.',
+    },
+    formal: {
+      requestTitle: 'Application for an External Activity Permit',
+      applicantRole: 'the applicant',
+      applicantIntro: 'This document is submitted to present the proposed activity clearly and completely to the recipient.',
+      planNote: 'Any change to the time, venue, or activity plan will be communicated to the recipient before it is carried out.',
+      commitments: ['Provide an update upon arrival', 'Remain reachable throughout the activity', 'Communicate every change of plan', 'Return according to the stated estimate', 'Maintain personal safety and the recipient’s trust'],
+      defenseNote: 'This application is submitted in good faith. The applicant commits to acting responsibly and following all information stated in this document.',
+      decisionEyebrow: 'All information and attachments have been reviewed',
+      decisionQuestion: 'May this activity application be approved?',
+      decisionLabel: 'Approve Application',
+      approvedMessage: 'The application has been approved. The applicant remains responsible for fulfilling every commitment stated in this document.',
+      cardTitle: 'Activity Approval Document',
+      cardFooter: 'This document remains valid while all submitted information, schedules, and commitments are observed.',
+    },
+  };
+  return (locale === 'en' ? en : id)[tone];
+}
+
+function openSectionPreset(section: HeadingSection, tone: PresetTone) {
   const current = project.headings ?? defaultHeadings(project.locale);
   const next = headingPreset(tone, project.locale);
+  const copy = sectionPresetCopy(project.locale, tone);
   const labels: Record<HeadingSection, string> = {
-    opening: c().openingSectionName,
     summary: c().summarySectionName,
     parties: c().partiesSectionName,
     plan: c().planSectionName,
@@ -967,26 +1098,35 @@ function openSectionHeadingPreset(section: HeadingSection, tone: string) {
     decision: c().decisionSectionName,
     ending: c().endingSectionName,
   };
-  const before = section === 'opening'
-    ? `${current.openingTitle} / ${current.openingEmphasis}`
-    : current[headingFields[section]];
-  const after = section === 'opening'
-    ? `${next.openingTitle} / ${next.openingEmphasis}`
-    : next[headingFields[section]];
+  const changes: PresetChange[] = [];
+  const add = (label: string, before: string | undefined, after: string, apply: () => void) => changes.push({ label, before: before || '', after, apply });
+  add(c().sectionTitle, current[headingFields[section]], next[headingFields[section]], () => { project.headings![headingFields[section]] = next[headingFields[section]]; });
+
+  if (section === 'summary') add(c().requestTitle, project.request.title, copy.requestTitle, () => { project.request.title = copy.requestTitle; });
+  if (section === 'parties') {
+    add(c().applicantRole, project.applicant.role, copy.applicantRole, () => { project.applicant.role = copy.applicantRole; });
+    add(c().intro, project.applicant.intro, copy.applicantIntro, () => { project.applicant.intro = copy.applicantIntro; });
+  }
+  if (section === 'plan') add(c().planNote, project.request.note, copy.planNote, () => { project.request.note = copy.planNote; });
+  if (section === 'commitments') copy.commitments.forEach((text, index) => add(`${c().commitmentLabel} ${index + 1}`, project.commitments[index]?.text, text, () => {
+    if (project.commitments[index]) { project.commitments[index].text = text; project.commitments[index].enabled = true; }
+  }));
+  if (section === 'defense') add(c().applicantMessage, project.defenseNote, copy.defenseNote, () => { project.defenseNote = copy.defenseNote; });
+  if (section === 'decision') {
+    add(c().decisionEyebrow, project.decision.eyebrow, copy.decisionEyebrow, () => { project.decision.eyebrow = copy.decisionEyebrow; });
+    add(c().finalQuestion, project.decision.question, copy.decisionQuestion, () => { project.decision.question = copy.decisionQuestion; });
+    add(c().approvalButton, project.decision.approvedLabel, copy.decisionLabel, () => { project.decision.approvedLabel = copy.decisionLabel; });
+  }
+  if (section === 'ending') {
+    add(c().approvedMessage, project.decision.approvedMessage, copy.approvedMessage, () => { project.decision.approvedMessage = copy.approvedMessage; });
+    add(c().permitCardTitle, project.card.title, copy.cardTitle, () => { project.card.title = copy.cardTitle; });
+    add(c().permitCardFooter, project.card.footer, copy.cardFooter, () => { project.card.footer = copy.cardFooter; });
+  }
 
   openPreset({
     title: c().sectionPresetTitle.replace('{section}', labels[section]),
     description: c().sectionPresetText,
-    before,
-    after,
-    apply: () => {
-      if (section === 'opening') {
-        project.headings!.openingTitle = next.openingTitle;
-        project.headings!.openingEmphasis = next.openingEmphasis;
-      } else {
-        project.headings![headingFields[section]] = next[headingFields[section]];
-      }
-    },
+    changes,
   });
 }
 
@@ -994,8 +1134,12 @@ function openPreset(payload: PresetPayload) {
   presetPayload = payload;
   document.querySelector<HTMLElement>('#preset-title')!.textContent = payload.title;
   document.querySelector<HTMLElement>('#preset-description')!.textContent = payload.description;
-  document.querySelector<HTMLElement>('#preset-before')!.textContent = payload.before;
-  document.querySelector<HTMLElement>('#preset-after')!.textContent = payload.after;
+  const list = document.querySelector<HTMLElement>('#preset-changes')!;
+  list.innerHTML = payload.changes.map((change) => `<article class="preset-change-row">
+    <strong>${escapeHtml(change.label)}</strong>
+    <div><span>${c().previousValue}</span><p>${escapeHtml(change.before || c().notFilled)}</p></div>
+    <div><span>${c().nextValue}</span><p>${escapeHtml(change.after)}</p></div>
+  </article>`).join('');
   document.querySelector<HTMLDialogElement>('#preset-dialog')?.showModal();
 }
 

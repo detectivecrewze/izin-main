@@ -124,8 +124,19 @@ export function safeExternalUrl(value?: string): string | undefined {
 
 export function formatGiftDate(date: string, locale: Locale): string {
   const parsed = new Date(`${date}T12:00:00`);
-  if (Number.isNaN(parsed.getTime())) return date;
+  if (Number.isNaN(parsed.getTime())) return '—';
   return new Intl.DateTimeFormat(locale === 'id' ? 'id-ID' : 'en-US', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
   }).format(parsed);
+}
+
+export function getGiftDateParts(date: string, locale: Locale): { month: string; day: string; weekday: string } {
+  const parsed = new Date(`${date}T12:00:00`);
+  if (Number.isNaN(parsed.getTime())) return { month: '—', day: '—', weekday: '—' };
+  const dateLocale = locale === 'id' ? 'id-ID' : 'en-US';
+  return {
+    month: new Intl.DateTimeFormat(dateLocale, { month: 'long' }).format(parsed).toUpperCase(),
+    day: String(parsed.getDate()),
+    weekday: new Intl.DateTimeFormat(dateLocale, { weekday: 'long' }).format(parsed).toUpperCase(),
+  };
 }

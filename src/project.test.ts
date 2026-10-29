@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { demoProject } from './demo';
-import { formatGiftDate, safeExternalUrl, validateProject } from './project';
+import { formatGiftDate, getGiftDateParts, safeExternalUrl, validateProject } from './project';
 import { studioText } from './studio-copy';
 
 describe('project contract', () => {
@@ -25,6 +25,10 @@ describe('project contract', () => {
     expect(validateProject(project)).toEqual([]);
   });
   it('formats Indonesian dates', () => expect(formatGiftDate('2026-11-14', 'id')).toContain('14 November 2026'));
+  it('keeps an incomplete Studio date renderable', () => {
+    expect(formatGiftDate('', 'id')).toBe('—');
+    expect(getGiftDateParts('', 'id')).toEqual({ month: '—', day: '—', weekday: '—' });
+  });
   it('keeps Indonesian and English Studio copy in parity', () => {
     expect(Object.keys(studioText('en')).sort()).toEqual(Object.keys(studioText('id')).sort());
   });

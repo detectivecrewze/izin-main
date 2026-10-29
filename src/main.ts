@@ -14,7 +14,7 @@ import { approvePublicGift, loadPublicGift, loadPublicResponse } from './api';
 import { getCopy } from './copy';
 import { demoProject } from './demo';
 import { getGiftUi } from './gift-ui';
-import { formatGiftDate, safeExternalUrl, safeMediaUrl, validateProject, type IzinMainProject, type PermitResponse, type ThemeId } from './project';
+import { formatGiftDate, getGiftDateParts, safeExternalUrl, safeMediaUrl, validateProject, type IzinMainProject, type PermitResponse, type ThemeId } from './project';
 import { themes } from './themes';
 
 const pageParams = new URLSearchParams(window.location.search);
@@ -50,13 +50,20 @@ if (!projectSource && publishedGiftId) {
 }
 const project = structuredClone(projectSource ?? demoProject);
 const requestedTheme = pageParams.get('theme');
-if (requestedTheme && requestedTheme in themes) project.theme = requestedTheme as ThemeId;
+// Theme query parameters are only a storefront-demo convenience. A published
+// customer gift and a Studio preview must always honor the theme saved in the
+// project rather than allowing the URL to override it.
+if (!publishedGiftId && !studioPreviewId && requestedTheme && requestedTheme in themes) project.theme = requestedTheme as ThemeId;
 const strings = getCopy(project.locale);
 const ui = getGiftUi(project.locale);
 const dateLocale = project.locale === 'id' ? 'id-ID' : 'en-US';
+const escapeHtml = (value: unknown) => String(value ?? '')
+  .replaceAll('&', '&amp;')
+  .replaceAll('<', '&lt;')
+  .replaceAll('>', '&gt;')
+  .replaceAll('"', '&quot;')
+  .replaceAll("'", '&#039;');
 const headings = {
-  openingTitle: ui.gateTitle,
-  openingEmphasis: ui.gateEmphasis,
   summaryTitle: ui.summaryTitle,
   partiesTitle: ui.partiesTitle,
   planTitle: ui.planTitle,
@@ -65,6 +72,10 @@ const headings = {
   decisionTitle: ui.decisionTitle,
   endingTitle: ui.completeTitle,
   ...project.headings,
+  // The cover is a product-level visual and follows the selected gift
+  // language. Customers edit the content inside the file, not this label.
+  openingTitle: ui.gateTitle,
+  openingEmphasis: ui.gateEmphasis,
 };
 const root = document.querySelector<HTMLDivElement>('#app');
 
@@ -111,6 +122,7 @@ const enabledCommitments = project.commitments.filter((item) => item.enabled).so
 const mapUrl = safeExternalUrl(project.request.mapsUrl);
 const musicAudioUrl = safeMediaUrl(project.music?.audioUrl, Boolean(studioPreviewId));
 const recipientDisplay = project.recipient.nickname || project.recipient.name;
+const requestDateParts = getGiftDateParts(project.request.date, project.locale);
 
 root.innerHTML = `
   <div class="grain" aria-hidden="true"></div>
@@ -187,16 +199,16 @@ root.innerHTML = `
         <div class="identity-file__people">
           <figure class="person-card person-card--applicant">
             <div class="person-card__photo">
-              ${project.applicant.photoUrl ? `<img src="${project.applicant.photoUrl}" alt="Foto ${project.applicant.name}" />` : `<span>${project.applicant.name.slice(0, 1)}</span>`}
+              ${project.applicant.photoUrl ? `<img src="${escapeHtml(project.applicant.photoUrl)}" alt="Foto ${escapeHtml(project.applicant.name)}" onerror="this.hidden=true;this.nextElementSibling.hidden=false" /><span hidden>${escapeHtml(project.applicant.name.slice(0, 1))}</span>` : `<span>${escapeHtml(project.applicant.name.slice(0, 1))}</span>`}
             </div>
-            <figcaption><span>${strings.applicantName.toUpperCase()}</span><strong>${project.applicant.name}</strong><small>${project.applicant.role || ui.applicantRole}</small></figcaption>
+            <figcaption><span>${strings.applicantName.toUpperCase()}</span><strong>${escapeHtml(project.applicant.name)}</strong><small>${escapeHtml(project.applicant.role || ui.applicantRole)}</small></figcaption>
           </figure>
           <div class="case-connection" aria-hidden="true"><span>${ui.submitting}</span><i>${icon('arrow')}</i></div>
           <figure class="person-card person-card--recipient">
             <div class="person-card__photo">
-              ${project.recipient.photoUrl ? `<img src="${project.recipient.photoUrl}" alt="Foto ${project.recipient.name}" />` : `<span>${project.recipient.name.slice(0, 1)}</span>`}
+              ${project.recipient.photoUrl ? `<img src="${escapeHtml(project.recipient.photoUrl)}" alt="Foto ${escapeHtml(project.recipient.name)}" onerror="this.hidden=true;this.nextElementSibling.hidden=false" /><span hidden>${escapeHtml(project.recipient.name.slice(0, 1))}</span>` : `<span>${escapeHtml(project.recipient.name.slice(0, 1))}</span>`}
             </div>
-            <figcaption><span>${strings.recipientName.toUpperCase()}</span><strong>${project.recipient.name}</strong><small>${ui.recipientRole}</small></figcaption>
+            <figcaption><span>${strings.recipientName.toUpperCase()}</span><strong>${escapeHtml(project.recipient.name)}</strong><small>${ui.recipientRole}</small></figcaption>
           </figure>
         </div>
         <div class="identity-file__body">
@@ -235,9 +247,9 @@ root.innerHTML = `
           ${mapUrl ? `<a class="map-link" href="${mapUrl}" target="_blank" rel="noreferrer">${icon('pin')}<span>${strings.openMaps}</span>${icon('arrow')}</a>` : ''}
         </article>
         <aside class="calendar-card reveal" aria-label="Tanggal kegiatan">
-          <span>${new Intl.DateTimeFormat(dateLocale, { month: 'long' }).format(new Date(`${project.request.date}T12:00:00`)).toUpperCase()}</span>
-          <strong>${new Date(`${project.request.date}T12:00:00`).getDate()}</strong>
-          <small>${new Intl.DateTimeFormat(dateLocale, { weekday: 'long' }).format(new Date(`${project.request.date}T12:00:00`)).toUpperCase()}</small>
+          <span>${requestDateParts.month}</span>
+          <strong>${requestDateParts.day}</strong>
+          <small>${requestDateParts.weekday}</small>
           <i>19:30 — ${project.request.returnEstimate.split('—')[0].trim()}</i>
         </aside>
       </div>

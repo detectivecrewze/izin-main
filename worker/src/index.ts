@@ -19,6 +19,7 @@ export interface Env {
   IZIN_MAIN_KV: KVNamespace;
   MEDIA: R2Bucket;
   ADMIN_TOKEN: string;
+  ORDER_INGEST_SECRET: string;
   ALLOWED_ORIGINS: string;
   PUBLIC_APP_URL: string;
   PUBLIC_API_URL: string;
@@ -39,6 +40,19 @@ interface ProjectMeta {
   updatedAt: string;
 }
 interface StudioAccess { token: string; issuedAt: string }
+interface CreateProjectInput { idempotencyKey?: string; orderId?: string; projectId?: string; locale?: Locale }
+interface OrderIngestInput { orderId?: string; customerName?: string; customerEmail?: string; locale?: Locale }
+interface OrderRecord {
+  orderId: string;
+  productId: 'izin-main';
+  projectId: string;
+  customerName?: string;
+  customerEmail?: string;
+  studioUrl: string;
+  status: 'studio_ready';
+  createdAt: string;
+  updatedAt: string;
+}
 
 const encoder = new TextEncoder();
 const json = (data: unknown, status = 200, headers: HeadersInit = {}) => new Response(JSON.stringify(data), {
@@ -86,6 +100,14 @@ async function requireAdmin(request: Request, env: Env) {
   const header = request.headers.get('Authorization') || '';
   const supplied = header.startsWith('Bearer ') ? header.slice(7) : '';
   if (!supplied || !env.ADMIN_TOKEN || !(await safeEqual(supplied, env.ADMIN_TOKEN))) throw new HttpError(401, 'Admin access is required.');
+}
+
+async function requireOrderIngest(request: Request, env: Env) {
+  const header = request.headers.get('Authorization') || '';
+  const supplied = header.startsWith('Bearer ') ? header.slice(7) : '';
+  if (!supplied || !env.ORDER_INGEST_SECRET || !(await safeEqual(supplied, env.ORDER_INGEST_SECRET))) {
+    throw new HttpError(401, 'Order integration access is required.');
+  }
 }
 
 async function requireStudioAccess(env: Env, projectId: string, supplied: string | null) {
@@ -140,9 +162,7 @@ async function listAllMeta(env: Env) {
   return projects.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 }
 
-async function createProject(request: Request, env: Env) {
-  await requireAdmin(request, env);
-  const body = await readJson<{ idempotencyKey?: string; orderId?: string; projectId?: string; locale?: Locale }>(request);
+async function createProjectFromInput(body: CreateProjectInput, env: Env) {
   const idempotencyKey = String(body.idempotencyKey || '').trim().slice(0, 128);
   if (!idempotencyKey) throw new HttpError(400, 'idempotencyKey is required.');
   const existingId = await env.IZIN_MAIN_KV.get(`idempotency:${idempotencyKey}`, 'text');
@@ -175,12 +195,64 @@ async function createProject(request: Request, env: Env) {
   return { project: meta, studioUrl: meta.studioUrl, idempotent: false };
 }
 
+async function createProject(request: Request, env: Env) {
+  await requireAdmin(request, env);
+  return createProjectFromInput(await readJson<CreateProjectInput>(request), env);
+}
+
+async function ingestPaidOrder(request: Request, env: Env) {
+  await requireOrderIngest(request, env);
+  const body = await readJson<OrderIngestInput>(request);
+  const orderId = String(body.orderId || '').trim().slice(0, 128);
+  if (!orderId) throw new HttpError(400, 'orderId is required.');
+  if (!/^[A-Za-z0-9._:-]+$/.test(orderId)) throw new HttpError(400, 'orderId contains unsupported characters.');
+
+  const existingOrder = await getJson<OrderRecord>(env.IZIN_MAIN_KV, `order:${orderId}`);
+  if (existingOrder) {
+    return {
+      created: false,
+      projectId: existingOrder.projectId,
+      studioUrl: existingOrder.studioUrl,
+      giftUrl: giftUrl(env, existingOrder.projectId),
+    };
+  }
+
+  const locale: Locale = body.locale === 'en' ? 'en' : 'id';
+  const creation = await createProjectFromInput({
+    idempotencyKey: `${orderId}:izin-main`,
+    orderId,
+    locale,
+  }, env);
+  const now = new Date().toISOString();
+  const order: OrderRecord = {
+    orderId,
+    productId: 'izin-main',
+    projectId: creation.project.projectId,
+    customerName: String(body.customerName || '').trim().slice(0, 160) || undefined,
+    customerEmail: String(body.customerEmail || '').trim().toLowerCase().slice(0, 254) || undefined,
+    studioUrl: creation.studioUrl,
+    status: 'studio_ready',
+    createdAt: now,
+    updatedAt: now,
+  };
+  await putJson(env.IZIN_MAIN_KV, `order:${orderId}`, order);
+  return {
+    created: !creation.idempotent,
+    projectId: order.projectId,
+    studioUrl: order.studioUrl,
+    giftUrl: giftUrl(env, order.projectId),
+  };
+}
+
 async function handle(request: Request, env: Env, context: ExecutionContext) {
   const url = new URL(request.url);
   const path = url.pathname;
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders(request, env) });
   const cors = corsHeaders(request, env);
   if (path === '/health') return json({ ok: true, service: 'izin-main-worker' }, 200, cors);
+  if (path === '/api/integrations/orders' && request.method === 'POST') {
+    return json(await ingestPaidOrder(request, env), 201, cors);
+  }
 
   if (path === '/v1/internal/projects' && request.method === 'GET') {
     await requireAdmin(request, env);
@@ -261,7 +333,11 @@ async function handle(request: Request, env: Env, context: ExecutionContext) {
       const key = `izin-main/${projectId}/${Date.now()}-${crypto.randomUUID().slice(0, 8)}.${rule.ext}`;
       const originalName = (request.headers.get('X-Filename') || 'upload').replace(/[^a-zA-Z0-9._ -]/g, '').slice(0, 120);
       await env.MEDIA.put(key, data, { httpMetadata: { contentType: type }, customMetadata: { projectId, originalName } });
-      return json({ ok: true, key, url: `${env.PUBLIC_API_URL.replace(/\/$/, '')}/v1/media/${key}` }, 201, cors);
+      // Media must be served by the same Worker environment that received the
+      // upload. In local development this keeps local R2 objects on localhost;
+      // in production the request origin is the deployed Worker domain.
+      const mediaBaseUrl = new URL(request.url).origin;
+      return json({ ok: true, key, url: `${mediaBaseUrl}/v1/media/${key}` }, 201, cors);
     }
   }
 

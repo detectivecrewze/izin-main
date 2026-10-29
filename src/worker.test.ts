@@ -32,6 +32,7 @@ function setup() {
   const pending: Promise<unknown>[] = [];
   const env = {
     IZIN_MAIN_KV: new MemoryKv(), MEDIA: new MemoryR2(), ADMIN_TOKEN: 'phase-3-test',
+    ORDER_INGEST_SECRET: 'phase-4-ingest-test',
     ALLOWED_ORIGINS: 'http://127.0.0.1:5176', PUBLIC_APP_URL: 'https://izin.example', PUBLIC_API_URL: 'https://api.izin.example',
   } as unknown as Env;
   const context = { waitUntil(promise: Promise<unknown>) { pending.push(promise); } };
@@ -82,5 +83,29 @@ describe('phase 3 worker flow', () => {
     expect(uploaded.status).toBe(201);
     expect(result.key).toMatch(/^izin-main\/permit-upload\//);
     expect((env.MEDIA as unknown as MemoryR2).values.has(result.key)).toBe(true);
+  });
+});
+
+describe('phase 4 paid-order ingestion', () => {
+  it('creates one Studio link per paid order and rejects invalid authorization', async () => {
+    const { env, call } = setup();
+    const payload = JSON.stringify({ orderId: 'ORDER-IZIN-001', customerName: 'Aldo', customerEmail: 'aldo@example.com' });
+    expect((await call('/api/integrations/orders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: payload })).status).toBe(401);
+
+    const headers = { Authorization: 'Bearer phase-4-ingest-test', 'Content-Type': 'application/json' };
+    const first = await call('/api/integrations/orders', { method: 'POST', headers, body: payload });
+    expect(first.status).toBe(201);
+    const created = await first.json() as { created: boolean; projectId: string; studioUrl: string; giftUrl: string };
+    expect(created.created).toBe(true);
+    expect(created.projectId).toMatch(/^permit-/);
+    expect(new URL(created.studioUrl).searchParams.get('token')).toBeTruthy();
+    expect(created.giftUrl).toContain(`gift=${created.projectId}`);
+
+    const repeated = await call('/api/integrations/orders', { method: 'POST', headers, body: payload });
+    const reused = await repeated.json() as typeof created;
+    expect(reused.created).toBe(false);
+    expect(reused.projectId).toBe(created.projectId);
+    expect(reused.studioUrl).toBe(created.studioUrl);
+    expect((env.IZIN_MAIN_KV as unknown as MemoryKv).values.has('order:ORDER-IZIN-001')).toBe(true);
   });
 });
