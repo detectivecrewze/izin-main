@@ -20,6 +20,7 @@ import { themes } from './themes';
 const pageParams = new URLSearchParams(window.location.search);
 const studioPreviewId = pageParams.get('studioPreview');
 const publishedGiftId = pageParams.get('gift');
+const isStorefrontDemo = pageParams.get('demo') === '1';
 const storedProjectKey = studioPreviewId
   ? `izin-main:studio-preview:${studioPreviewId}`
   : publishedGiftId
@@ -521,6 +522,10 @@ function showApprovedState(response: PermitResponse, navigate = false) {
 }
 
 async function restoreResponse() {
+  // Storefront demos must always start before approval so every visitor can
+  // experience the stamp and printer sequence. Real recipient links continue
+  // to restore the persisted Worker response as usual.
+  if (isStorefrontDemo) return;
   try {
     if (usesRemoteGift) {
       const { response } = await loadPublicResponse(project.id);
@@ -540,7 +545,9 @@ document.querySelector<HTMLButtonElement>('#approve-button')?.addEventListener('
   const now = new Date();
   let response: PermitResponse;
   try {
-    if (usesRemoteGift) response = (await approvePublicGift(project.id)).response;
+    if (isStorefrontDemo) {
+      response = { projectId: project.id, status: 'approved', respondedAt: now.toISOString() };
+    } else if (usesRemoteGift) response = (await approvePublicGift(project.id)).response;
     else {
       response = { projectId: project.id, status: 'approved', respondedAt: now.toISOString() };
       storeResponse(response);
