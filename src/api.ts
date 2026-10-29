@@ -1,6 +1,9 @@
 import type { IzinMainProject, PermitResponse } from './project';
 
-const configuredBase = String(import.meta.env.VITE_IZIN_MAIN_API_URL || '/api').replace(/\/$/, '');
+const defaultApiBase = import.meta.env.DEV
+  ? '/api'
+  : 'https://izin-main.aldoramadhan16.workers.dev';
+const configuredBase = String(import.meta.env.VITE_IZIN_MAIN_API_URL || defaultApiBase).replace(/\/$/, '');
 
 export interface StudioPayload {
   project: IzinMainProject;
