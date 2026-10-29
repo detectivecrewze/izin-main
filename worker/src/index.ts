@@ -94,7 +94,13 @@ const getJson = async <T>(kv: KVNamespace, key: string) => {
 };
 const putJson = (kv: KVNamespace, key: string, value: unknown) => kv.put(key, JSON.stringify(value));
 const studioUrl = (env: Env, projectId: string, accessToken: string) => `${env.PUBLIC_APP_URL.replace(/\/$/, '')}/studio/${encodeURIComponent(projectId)}?token=${encodeURIComponent(accessToken)}`;
-const giftUrl = (env: Env, projectId: string) => `${env.PUBLIC_APP_URL.replace(/\/$/, '')}/?gift=${encodeURIComponent(projectId)}`;
+const giftUrl = (env: Env, projectId: string, request?: Request) => {
+  const origin = request?.headers.get('Origin');
+  const localOrigin = origin && allowedOrigins(env).includes(origin) && ['localhost', '127.0.0.1'].includes(new URL(origin).hostname)
+    ? origin
+    : env.PUBLIC_APP_URL.replace(/\/$/, '');
+  return `${localOrigin}/?gift=${encodeURIComponent(projectId)}`;
+};
 
 async function requireAdmin(request: Request, env: Env) {
   const header = request.headers.get('Authorization') || '';
@@ -313,9 +319,9 @@ async function handle(request: Request, env: Env, context: ExecutionContext) {
       await Promise.all([putJson(env.IZIN_MAIN_KV, `draft:${projectId}`, project), putJson(env.IZIN_MAIN_KV, `gift:${projectId}`, { project, publishedAt })]);
       await updateMeta(env, projectId, {
         status: response ? 'Disetujui' : 'Published', locale: project.locale, applicantName: project.applicant.name,
-        recipientName: project.recipient.name, giftUrl: giftUrl(env, projectId), error: undefined,
+        recipientName: project.recipient.name, giftUrl: giftUrl(env, projectId, request), error: undefined,
       });
-      return json({ ok: true, giftUrl: giftUrl(env, projectId), publishedAt }, 200, cors);
+      return json({ ok: true, giftUrl: giftUrl(env, projectId, request), publishedAt }, 200, cors);
     }
     if (action === 'upload' && request.method === 'POST') {
       const type = (request.headers.get('Content-Type') || '').split(';')[0].toLowerCase();
