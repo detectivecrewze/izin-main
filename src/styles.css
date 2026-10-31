@@ -215,8 +215,6 @@ svg { width: 1.25em; height: 1.25em; display: block; }
   box-shadow: inset 0 1px rgba(255,255,255,.12);
 }
 
-.folder.is-opening { transform: translateY(-46vh) rotate(-5deg) scale(.95); opacity: 0; }
-
 .folder__tab {
   position: absolute;
   z-index: 2;
@@ -241,18 +239,6 @@ svg { width: 1.25em; height: 1.25em; display: block; }
 .gate__meta span, .gate__recipient span { font: 400 9px "IBM Plex Mono", monospace; letter-spacing: .12em; text-transform: uppercase; opacity: .72; }
 .gate__meta strong { font: 600 11px "IBM Plex Mono", monospace; letter-spacing: .08em; }
 .gate__recipient strong { font: 400 22px "DM Serif Display", serif; }
-
-.pending-stamp {
-  margin-top: auto;
-  align-self: flex-end;
-  border: 3px double #e7a8a1;
-  color: #e7a8a1;
-  padding: 9px 13px;
-  transform: rotate(-5deg);
-  font: 600 10px "IBM Plex Mono", monospace;
-  letter-spacing: .11em;
-  text-transform: uppercase;
-}
 
 .folder__string { position: absolute; z-index: 3; width: 11px; height: 11px; right: 9%; border-radius: 50%; background: #d9b56d; box-shadow: 0 0 0 4px var(--accent), 0 0 0 6px #d9b56d; }
 .folder__string--top { top: 33%; }
@@ -282,8 +268,6 @@ svg { width: 1.25em; height: 1.25em; display: block; }
 }
 .open-file:hover { transform: translateY(-2px); }
 .open-file:disabled { cursor: wait; }
-.gate__hint { color: rgba(255,255,255,.72); font-size: 11px; text-align: center; margin: 20px 0 0; max-width: 340px; line-height: 1.7; }
-
 .gift {
   min-height: 100vh;
   overflow: clip;
@@ -475,7 +459,6 @@ svg { width: 1.25em; height: 1.25em; display: block; }
   .folder h1 { font-size: clamp(42px, 13vw, 54px); margin-top: 24px; max-width: 100%; overflow-wrap: anywhere; }
   .gate__meta, .gate__recipient { align-items: flex-start; flex-direction: column; gap: 6px; }
   .gate__meta strong { overflow-wrap: anywhere; }
-  .pending-stamp { margin-top: 22px; }
   .folder__seal { opacity: .65; }
   .masthead { width: calc(100% - 28px); gap: 11px; }
   .masthead { grid-template-columns: auto 1fr; }
@@ -749,7 +732,7 @@ body.gift-open { overflow: hidden; }
   to { opacity: 0; transform: scale(1.18); }
 }
 
-/* The cover now behaves like a physical case file instead of simply fading away. */
+/* Physical case-file cover shared by the recipient gift. */
 .folder {
   min-height: clamp(390px, 66vh, 530px);
   padding: 0;
@@ -799,61 +782,7 @@ body.gift-open { overflow: hidden; }
   box-shadow: inset 0 1px rgba(255,255,255,.12);
 }
 
-.folder__paper {
-  position: absolute;
-  z-index: 2;
-  inset: 18px 20px 8px;
-  padding: clamp(40px, 8vw, 74px);
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: center;
-  color: var(--ink);
-  background:
-    repeating-linear-gradient(0deg, transparent 0 29px, color-mix(in srgb, var(--line) 38%, transparent) 30px, transparent 31px),
-    var(--paper-2);
-  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
-  box-shadow: 9px 10px 0 rgba(31, 26, 19, .16);
-  opacity: 0;
-  transform: translateY(19%) scale(.94);
-}
-
-.folder__paper::after {
-  content: "RECEIVED";
-  position: absolute;
-  right: 9%;
-  bottom: 10%;
-  padding: 8px 12px;
-  border: 3px double var(--accent);
-  color: var(--accent);
-  font: 600 9px "IBM Plex Mono", monospace;
-  letter-spacing: .12em;
-  transform: rotate(-7deg);
-}
-
-.folder__paper > span,
-.folder__paper > i { color: var(--accent); font: 600 9px "IBM Plex Mono", monospace; letter-spacing: .14em; font-style: normal; }
-.folder__paper > small { max-width: 340px; margin: auto 0; color: var(--muted); font-size: clamp(17px, 3vw, 24px); line-height: 1.55; }
-.folder__paper > i { margin-top: auto; }
-
-.folder.is-opening { transform: rotate(0deg) scale(.98); opacity: 1; }
-.folder.is-opening .folder__front { animation: folder-cover-open 1.35s cubic-bezier(.2,.78,.2,1) forwards; }
-.folder.is-opening .folder__paper { animation: folder-paper-rise 1.3s cubic-bezier(.18,.82,.22,1) 260ms forwards; }
-.folder.is-opening + .open-file,
-.folder.is-opening ~ .gate__hint { opacity: 0; transform: translateY(10px); transition: opacity 260ms ease, transform 260ms ease; }
-
-@keyframes folder-cover-open {
-  0% { transform: rotateX(0) translateY(0); opacity: 1; }
-  58% { transform: rotateX(-72deg) translateY(3%); opacity: .96; }
-  100% { transform: rotateX(-108deg) translateY(17%); opacity: 0; }
-}
-
-@keyframes folder-paper-rise {
-  0% { transform: translateY(19%) scale(.94); opacity: 0; }
-  38% { opacity: 1; }
-  78% { transform: translateY(-5%) scale(1); opacity: 1; }
-  100% { transform: translateY(-3%) scale(1); opacity: 1; }
-}
+.folder.is-opening + .open-file { opacity: 0; transform: translateY(10px); transition: opacity 260ms ease, transform 260ms ease; }
 
 /* One relationship file, two visible people. */
 .identity-file {
@@ -902,8 +831,6 @@ body.gift-open { overflow: hidden; }
   .audio-toggle button svg { width: 20px; height: 20px; }
   .audio-toggle__status { top: 55px; }
   .folder__front { padding: 38px 24px 34px; }
-  .folder__paper { inset: 12px 10px 6px; padding: 38px 26px; }
-  .folder__paper > small { font-size: clamp(18px, 6vw, 25px); }
   .identity-file { grid-template-columns: 1fr; gap: 24px; padding: 20px 15px 30px; }
   .identity-file__people { grid-template-columns: minmax(0, 1fr) 32px minmax(0, 1fr); gap: 4px; }
   .person-card { padding: 7px 7px 12px; }
@@ -930,7 +857,5 @@ body.gift-open { overflow: hidden; }
 
 @media (prefers-reduced-motion: reduce) {
   .gift-pages { scroll-behavior: auto; }
-  .folder.is-opening .folder__front { opacity: 0; transform: none; }
-  .folder.is-opening .folder__paper { opacity: 1; transform: none; }
   .audio-toggle.is-playing button::after { animation: none; }
 }

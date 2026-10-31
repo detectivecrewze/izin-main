@@ -1,0 +1,195 @@
+/* The recipient's centered permit cards. Content and interactions stay shared. */
+:root[data-template="permit-desk"] body,
+:root[data-template="permit-desk"] .gift {
+  background: radial-gradient(ellipse at 50% 30%, #bca68b 0, #8b745e 58%, #584b40 100%);
+}
+:root[data-template="permit-desk"] .gift::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(90deg, transparent 0 90px, #3b2b2010 91px 92px),
+    radial-gradient(ellipse at 50% 50%, transparent 22%, #241b1761 100%);
+}
+:root[data-template="permit-desk"] .gate {
+  background: radial-gradient(ellipse at center, #bba58d 0, #8d745f 58%, #4a3a30 100%);
+}
+:root[data-template="permit-desk"] .gate::before {
+  opacity: .18;
+  background-image: repeating-linear-gradient(90deg, transparent 0 94px, #32261d 95px 96px);
+}
+:root[data-template="permit-desk"] .gate__folder-wrap { width: min(88vw, 490px); }
+:root[data-template="permit-desk"] .folder {
+  min-height: clamp(350px, 58vh, 470px);
+  transition: transform 600ms cubic-bezier(.2,.8,.2,1), opacity 450ms ease;
+}
+:root[data-template="permit-desk"] .folder.is-opening { transform: translateY(-18px) rotate(-4deg) scale(.96); opacity: 0; }
+:root[data-template="permit-desk"] .folder.is-opening .folder__front { animation: none; }
+:root[data-template="permit-desk"] .folder::after,
+:root[data-template="permit-desk"] .folder__front::after { display: none; }
+:root[data-template="permit-desk"] .folder__tab {
+  top: -27px;
+  left: 5%;
+  padding: 7px 14px 8px;
+  border-radius: 8px 8px 0 0;
+  background: var(--dark);
+  white-space: nowrap;
+}
+:root[data-template="permit-desk"] .folder__front {
+  border-radius: 4px 4px 14px 14px;
+  background: linear-gradient(143deg, #ffffff13, transparent 44%), var(--dark);
+  box-shadow: 15px 25px 0 #332a2461, 0 32px 80px #24191280;
+}
+:root[data-template="permit-desk"] .folder h1 { font-size: clamp(48px, 10vw, 72px); line-height: .99; }
+:root[data-template="permit-desk"] .folder__content { justify-content: center; }
+:root[data-template="permit-desk"] .open-file {
+  width: min(76%, 330px);
+  min-width: 0;
+  min-height: 52px;
+  margin-top: 18px;
+}
+:root[data-template="permit-desk"] .gift-page {
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  padding: max(16px, env(safe-area-inset-top)) 14px max(82px, calc(env(safe-area-inset-bottom) + 76px));
+  background: transparent;
+}
+:root[data-template="permit-desk"] .gift-page .desk-sheet {
+  position: relative;
+  width: min(100%, 480px);
+  max-height: calc(100dvh - 112px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  margin: 0 auto;
+  padding: clamp(22px, 4vw, 38px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  border: 1px solid #ddceba;
+  border-radius: 4px 4px 15px 15px;
+  color: var(--ink);
+  background: repeating-linear-gradient(0deg, transparent 0 31px, #6158440b 32px), var(--paper-2);
+  box-shadow: 9px 10px 0 #4e3a3066, 0 22px 65px #24191280, inset 0 0 0 8px #ffffff75;
+  animation: desk-sheet-enter 620ms cubic-bezier(.2,.8,.2,1) both;
+}
+:root[data-template="permit-desk"] .gift-page .desk-sheet::-webkit-scrollbar { display: none; }
+:root[data-template="permit-desk"] .gift-page .desk-sheet::before {
+  content: "";
+  display: block;
+  width: 32%;
+  height: 15px;
+  margin: -27px auto 21px;
+  border-radius: 0 0 6px 6px;
+  background: linear-gradient(90deg, #89786b, #d3c8b8 25% 75%, #8a7969);
+  box-shadow: 0 3px 5px #30251b33;
+}
+:root[data-template="permit-desk"] .gift-page .desk-sheet > * { width: 100%; margin-left: 0; margin-right: 0; }
+:root[data-template="permit-desk"] .gift-page .section-heading {
+  display: block;
+  margin: 0 0 22px;
+  padding: 8px 0 17px;
+  border-bottom: 1px solid var(--line);
+}
+:root[data-template="permit-desk"] .section-heading > span {
+  display: block;
+  padding: 0 0 10px;
+  font-size: 9px;
+}
+:root[data-template="permit-desk"] .section-heading p { font-size: 8px; }
+:root[data-template="permit-desk"] .gift-page .section-heading h2 {
+  max-width: 100%;
+  font-size: clamp(30px, 3vw, 35px);
+  line-height: 1.06;
+  overflow-wrap: anywhere;
+}
+:root[data-template="permit-desk"] .summary-grid,
+:root[data-template="permit-desk"] .plan-layout { display: block; }
+:root[data-template="permit-desk"] .summary-paper,
+:root[data-template="permit-desk"] .plan-form,
+:root[data-template="permit-desk"] .identity-file,
+:root[data-template="permit-desk"] .commitment-sheet,
+:root[data-template="permit-desk"] .decision-file {
+  width: 100%;
+  margin: 0;
+  padding: 18px;
+  border: 1px solid #b9a58d70;
+  box-shadow: none;
+  background: #fffaf0c9;
+  transform: none;
+}
+:root[data-template="permit-desk"] .summary-paper h3,
+:root[data-template="permit-desk"] .decision-file h3 { font-size: clamp(28px, 3vw, 34px); line-height: 1.1; }
+:root[data-template="permit-desk"] .summary-intro { margin: 16px 0 22px; font-size: 13px; }
+:root[data-template="permit-desk"] .request-ticket { display: none; }
+:root[data-template="permit-desk"] .paperclip { top: -12px; right: 8%; height: 43px; width: 17px; }
+:root[data-template="permit-desk"] .detail-row { grid-template-columns: 1fr; gap: 5px; padding: 10px 0; }
+:root[data-template="permit-desk"] .detail-row:not(:has(.detail-icon)) { grid-template-columns: 1fr; }
+:root[data-template="permit-desk"] .detail-icon { display: none; }
+:root[data-template="permit-desk"] .detail-label { font: 600 8px "IBM Plex Mono", monospace; }
+:root[data-template="permit-desk"] .review-mark { margin-top: 18px; font-size: 8px; }
+:root[data-template="permit-desk"] .identity-file { display: block; }
+:root[data-template="permit-desk"] .identity-file__people { gap: 7px; }
+:root[data-template="permit-desk"] .person-card { padding: 6px 6px 10px; }
+:root[data-template="permit-desk"] .person-card figcaption strong { font-size: 17px; }
+:root[data-template="permit-desk"] .person-card figcaption small { font-size: 7px; }
+:root[data-template="permit-desk"] .case-connection span { display: none; }
+:root[data-template="permit-desk"] .case-connection i { width: 26px; height: 26px; }
+:root[data-template="permit-desk"] .identity-file__body { margin-top: 22px; }
+:root[data-template="permit-desk"] .identity-file__body h3 { font-size: 27px; overflow-wrap: anywhere; }
+:root[data-template="permit-desk"] .identity-file__body > p { font-size: 12px; line-height: 1.65; }
+:root[data-template="permit-desk"] .identity-file__verified { display: none; }
+:root[data-template="permit-desk"] .signature span { font-size: 42px; }
+:root[data-template="permit-desk"] .plan-form__hero { padding: 20px 0; }
+:root[data-template="permit-desk"] .plan-form__hero h3 { font-size: 28px; }
+:root[data-template="permit-desk"] .plan-form__grid { display: block; }
+:root[data-template="permit-desk"] .plan-note { margin-top: 15px; padding: 13px; font-size: 11px; }
+:root[data-template="permit-desk"] .calendar-card { display: none; }
+:root[data-template="permit-desk"] .commitment-sheet__header { gap: 10px; font-size: 8px; }
+:root[data-template="permit-desk"] .commitment-sheet li { grid-template-columns: 25px 1fr 20px; gap: 8px; min-height: 60px; }
+:root[data-template="permit-desk"] .commitment-sheet li > span { width: 22px; height: 22px; }
+:root[data-template="permit-desk"] .commitment-sheet li p { font-size: 12px; }
+:root[data-template="permit-desk"] .commitment-sheet__footer { padding-top: 20px; }
+:root[data-template="permit-desk"] .commitment-sheet__footer span { font-size: 33px; }
+:root[data-template="permit-desk"] .memo { width: 100%; padding: 35px 22px 26px; transform: rotate(-1deg); }
+:root[data-template="permit-desk"] .memo > p { font-size: clamp(26px, 7vw, 37px); line-height: 1.16; }
+:root[data-template="permit-desk"] .memo > div { margin-top: 24px; }
+:root[data-template="permit-desk"] .memo > div strong { font-size: 43px; }
+:root[data-template="permit-desk"] .memo__stamp { width: 60px; height: 60px; font-size: 7px; }
+:root[data-template="permit-desk"] .decision-file { min-height: 300px; padding: 30px 20px; }
+:root[data-template="permit-desk"] .decision-file__message { margin: 18px 0 25px; font-size: 12px; }
+:root[data-template="permit-desk"] .decision-actions button { min-height: 70px; }
+:root[data-template="permit-desk"] .decision-stamp { width: 150px; height: 150px; border-width: 7px; }
+:root[data-template="permit-desk"] .decision-stamp span { font-size: 20px; }
+:root[data-template="permit-desk"] .permit-section { min-height: 0; }
+:root[data-template="permit-desk"] .permit-printer { width: 100%; padding-top: 54px; }
+:root[data-template="permit-desk"] .permit-printer__machine { height: 92px; padding: 17px 20px; left: 0; right: 0; border-radius: 10px 10px 3px 3px; }
+:root[data-template="permit-desk"] .permit-printer__machine::after { bottom: 13px; height: 15px; }
+:root[data-template="permit-desk"] .permit-card { width: 87%; padding: 24px 17px; }
+:root[data-template="permit-desk"] .permit-card__top strong { font-size: 30px; }
+:root[data-template="permit-desk"] .permit-card__approved { min-width: 0; margin: 23px auto; padding: 8px 10px; }
+:root[data-template="permit-desk"] .permit-card dl div { grid-template-columns: 1fr; gap: 4px; padding: 9px 0; }
+:root[data-template="permit-desk"] .permit-card > p { margin-top: 18px; font-size: 16px; }
+:root[data-template="permit-desk"] .permit-card__seal { width: 92px; height: 92px; margin-top: 20px; }
+:root[data-template="permit-desk"] .permit-actions { gap: 8px; margin-top: 22px; }
+:root[data-template="permit-desk"] .permit-actions button { min-height: 44px; padding: 0 10px; font-size: 11px; }
+:root[data-template="permit-desk"] .page-navigation { bottom: max(9px, env(safe-area-inset-bottom)); }
+:root[data-template="permit-desk"] .audio-toggle { top: max(11px, env(safe-area-inset-top)); right: 11px; }
+@keyframes desk-sheet-enter { from { opacity: .45; transform: translateY(24px) rotate(1deg); } to { opacity: 1; transform: translateY(0) rotate(0); } }
+@media (max-width: 760px) {
+  :root[data-template="permit-desk"] .gift-page { padding-inline: 13px; }
+  :root[data-template="permit-desk"] .gift-page .desk-sheet { width: min(100%, 430px); padding: 22px 19px; }
+  :root[data-template="permit-desk"] .gift-page .section-heading h2 { font-size: clamp(30px, 8vw, 38px); }
+  :root[data-template="permit-desk"] .identity-file__people { grid-template-columns: minmax(0, 1fr) 26px minmax(0, 1fr); }
+}
+@media (max-width: 360px) {
+  :root[data-template="permit-desk"] .folder h1 { font-size: 40px; letter-spacing: -.045em; }
+  :root[data-template="permit-desk"] .gift-page { padding-inline: 9px; }
+  :root[data-template="permit-desk"] .gift-page .desk-sheet { padding: 19px 15px; }
+  :root[data-template="permit-desk"] .gift-page .section-heading h2 { font-size: 27px; }
+  :root[data-template="permit-desk"] .summary-paper h3,
+  :root[data-template="permit-desk"] .decision-file h3 { font-size: 28px; }
+  :root[data-template="permit-desk"] .person-card figcaption strong { font-size: 15px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  :root[data-template="permit-desk"] .gift-page .desk-sheet { animation: none; }
+}

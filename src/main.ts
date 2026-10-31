@@ -9,6 +9,7 @@ import '@fontsource/plus-jakarta-sans/latin-500.css';
 import '@fontsource/plus-jakarta-sans/latin-600.css';
 import '@fontsource/plus-jakarta-sans/latin-700.css';
 import './styles.css';
+import './permit-desk.css';
 
 import { approvePublicGift, loadPublicGift, loadPublicResponse } from './api';
 import { getCopy } from './copy';
@@ -21,14 +22,15 @@ const pageParams = new URLSearchParams(window.location.search);
 const defaultPublicGiftId = 'permit-mvtsxc97-bf660969';
 const studioPreviewId = pageParams.get('studioPreview');
 const explicitPublishedGiftId = pageParams.get('gift');
-const isDefaultPublicGift = !studioPreviewId && !explicitPublishedGiftId;
+const isLocalPreview = pageParams.get('preview') === '1';
+const isDefaultPublicGift = !studioPreviewId && !explicitPublishedGiftId && !isLocalPreview;
 const publishedGiftId = explicitPublishedGiftId ?? (isDefaultPublicGift ? defaultPublicGiftId : null);
 // Storefront previews run inside an iframe. Keep the explicit flag, but also
 // detect the iframe so an older cached storefront bundle cannot accidentally
 // restore a recipient's persisted approval inside the public product demo.
 // The root-domain showcase uses the curated KV project too, but remains
 // replayable and never writes a recipient response.
-const isStorefrontDemo = pageParams.get('demo') === '1' || window.parent !== window || isDefaultPublicGift;
+const isStorefrontDemo = pageParams.get('demo') === '1' || window.parent !== window || isDefaultPublicGift || isLocalPreview;
 document.documentElement.dataset.embeddedDemo = isStorefrontDemo ? 'true' : 'false';
 const storedProjectKey = studioPreviewId
   ? `izin-main:studio-preview:${studioPreviewId}`
@@ -144,11 +146,6 @@ root.innerHTML = `
     <div class="desk-shadow desk-shadow--two" aria-hidden="true"></div>
     <div class="gate__folder-wrap">
       <div class="folder" id="folder">
-        <div class="folder__paper" aria-hidden="true">
-          <span>${ui.formCode} / ${project.requestNumber}</span>
-          <small>${project.applicant.nickname || project.applicant.name} ${ui.paperSubtitle} ${recipientDisplay}</small>
-          <i>${ui.swipeHint}</i>
-        </div>
         <div class="folder__front">
           <span class="folder__tab">BERKAS MASUK</span>
           <div class="folder__string folder__string--top" aria-hidden="true"></div>
@@ -165,12 +162,10 @@ root.innerHTML = `
               <span>${strings.fileFor}</span>
               <strong>${project.recipient.name}</strong>
             </div>
-            <span class="pending-stamp">${strings.statusPending}</span>
           </div>
         </div>
       </div>
       <button class="open-file" id="open-file" type="button">${icon('folder')}<span>${strings.openFile}</span>${icon('arrow')}</button>
-      <p class="gate__hint">${ui.gateHint}</p>
     </div>
   </section>
 
@@ -357,7 +352,15 @@ root.innerHTML = `
 `;
 
 document.documentElement.dataset.theme = project.theme;
+document.documentElement.dataset.template = 'permit-desk';
 document.documentElement.lang = project.locale;
+
+document.querySelectorAll<HTMLElement>('.gift-page').forEach((page) => {
+  const sheet = document.createElement('div');
+  sheet.className = 'desk-sheet';
+  while (page.firstChild) sheet.append(page.firstChild);
+  page.append(sheet);
+});
 
 const gate = document.querySelector<HTMLElement>('#gate');
 const folder = document.querySelector<HTMLElement>('#folder');
@@ -460,6 +463,7 @@ function goToPage(index: number, behavior: ScrollBehavior = 'smooth') {
   currentPageIndex = Math.max(0, Math.min(index, pages.length - 1));
   pageDeck.scrollTo({ left: pages[currentPageIndex].offsetLeft, behavior });
   pages[currentPageIndex].scrollTo({ top: 0, behavior: 'auto' });
+  pages[currentPageIndex].querySelector<HTMLElement>('.desk-sheet')?.scrollTo({ top: 0, behavior: 'auto' });
   renderPageNavigation();
   if (pages[currentPageIndex].dataset.page === 'permit') startPermitPrinter();
 }
@@ -507,15 +511,13 @@ openFileButton?.addEventListener('click', () => {
   startGiftAudio();
   folder?.classList.add('is-opening');
   window.setTimeout(() => {
+    gate?.setAttribute('hidden', '');
     gift?.removeAttribute('aria-hidden');
     document.body.classList.add('gift-open');
     renderPageNavigation();
     goToPage(0, 'auto');
-  }, 1050);
-  window.setTimeout(() => {
-    gate?.setAttribute('hidden', '');
     pageDeck?.focus({ preventScroll: true });
-  }, 1750);
+  }, 620);
 });
 
 const observer = new IntersectionObserver((entries) => {

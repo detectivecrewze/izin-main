@@ -28,6 +28,9 @@ Root URL menampilkan opening map. Parameter demo yang tersedia:
 - `?open=1` membuka gift langsung untuk QA.
 - `?theme=crimson-office` menampilkan palet Crimson Office.
 - `?open=1&section=decision-title` membuka gift pada section keputusan untuk QA.
+- `?preview=1` membuka demo lokal dengan layout kartu **Meja Perizinan**. Tambahkan `&open=1` untuk langsung memeriksa kartu isi.
+
+Meja Perizinan adalah layout Gift Pages utama, bukan pilihan template terpisah. Semua project memakai konten dan interaksi yang sama, termasuk project lama; Studio tidak membutuhkan pemilih desain.
 
 Pada alur penerima normal, tombol `Buka berkas` sekaligus mencoba memulai soundtrack. Kontrol audio tampil sebagai tombol musik SVG ringkas di pojok kanan atas; ketuk untuk jeda atau memutar kembali tanpa menutupi dokumen. Pembukaan langsung melalui `?open=1` sengaja tidak memaksa autoplay karena tidak memiliki gesture pengguna.
 

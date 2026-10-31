@@ -1,7 +1,7 @@
 import type { Locale } from './project';
 
 const id = {
-  agency: 'Kantor Perizinan Pacar', division: 'Divisi Main Sebentar & Pulang Tepat Waktu', statusPending: 'Menunggu stempel kamu',
+  agency: 'Kantor Perizinan Pacar', division: 'Divisi Main Sebentar & Pulang Tepat Waktu',
   openFile: 'Buka berkas', fileFor: 'Berkas ditujukan kepada', summary: 'Ringkasan permohonan',
   applicant: 'Dua pihak', plan: 'Rencana main', commitments: 'Janji yang dibawa',
   defense: 'Catatan dari pemohon', decision: 'Stempel terakhir', requestNo: 'Nomor berkas',
@@ -16,7 +16,7 @@ const id = {
 };
 
 const en: typeof id = {
-  agency: 'Department of Relationship Affairs', division: 'Permit & Quality Time Division', statusPending: 'Awaiting review',
+  agency: 'Department of Relationship Affairs', division: 'Permit & Quality Time Division',
   openFile: 'Open the file', fileFor: 'File addressed to', summary: 'Request summary', applicant: 'Applicant profile',
   plan: 'Proposed plan', commitments: 'Statement & commitments', defense: 'A little defense note', decision: 'Decision desk',
   requestNo: 'Request number', applicantName: 'Applicant', recipientName: 'Recipient', activity: 'Purpose', date: 'Date',
