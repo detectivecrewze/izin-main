@@ -11,7 +11,6 @@ import QRCode from 'qrcode';
 
 import { ApiError, loadStudioProject, publishStudioGift, saveStudioDraft, uploadStudioMedia } from './api';
 import { demoProject } from './demo';
-import { getGiftUi } from './gift-ui';
 import { validateProject, type IzinMainProject, type Locale, type ThemeId } from './project';
 import { studioText } from './studio-copy';
 import { themes } from './themes';
@@ -50,7 +49,7 @@ const projectId = pathParts[1] || 'demo-permit';
 const accessToken = new URLSearchParams(window.location.search).get('token');
 const isDemoAccess = accessToken === 'demo-access';
 
-const icon = (name: 'arrow' | 'check' | 'eye' | 'image' | 'music' | 'upload' | 'save' | 'close' | 'copy' | 'spark' | 'folder' | 'download' | 'heart') => {
+const icon = (name: 'arrow' | 'check' | 'eye' | 'image' | 'music' | 'upload' | 'save' | 'close' | 'copy' | 'folder' | 'download' | 'heart') => {
   const paths: Record<typeof name, string> = {
     arrow: '<path d="M5 12h14M14 7l5 5-5 5"/>',
     check: '<path d="m5 12 4 4L19 6"/>',
@@ -61,7 +60,6 @@ const icon = (name: 'arrow' | 'check' | 'eye' | 'image' | 'music' | 'upload' | '
     save: '<path d="M5 4h12l2 2v14H5z"/><path d="M8 4v6h8V4M8 20v-6h8v6"/>',
     close: '<path d="m6 6 12 12M18 6 6 18"/>',
     copy: '<rect x="8" y="8" width="11" height="11" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/>',
-    spark: '<path d="m12 3 1.4 4.1L18 9l-4.6 1.9L12 15l-1.4-4.1L6 9l4.6-1.9zM18 15l.8 2.2L21 18l-2.2.8L18 21l-.8-2.2L15 18l2.2-.8z"/>',
     folder: '<path d="M3 7.5h7l2.2 2.5H21v9.5H3z"/><path d="M3 7.5V5h7l2 2.5"/>',
     download: '<path d="M12 3v12m-5-5 5 5 5-5M5 21h14"/>',
     heart: '<path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8Z"/>',
@@ -98,8 +96,6 @@ function loadDraft(): IzinMainProject {
 }
 
 let project = loadDraft();
-project.headings ??= defaultHeadings(project.locale);
-syncDefaultOpeningHeadings();
 let remotePublished = false;
 let remoteGiftUrl = '';
 let recipientResponse: import('./project').PermitResponse | null = null;
@@ -142,8 +138,6 @@ async function bootstrapStudio() {
     try {
       const payload = await loadStudioProject(projectId, accessToken);
       project = payload.project;
-      project.headings ??= defaultHeadings(project.locale);
-      syncDefaultOpeningHeadings();
       recipientResponse = payload.response;
       remotePublished = payload.status === 'Published' || payload.status === 'Disetujui';
       remoteGiftUrl = payload.giftUrl || '';
@@ -202,17 +196,9 @@ function changeStudioLocale(nextLocale: Locale) {
   if (previousLocale !== nextLocale) translatePresetBackedContent(previousLocale, nextLocale);
   uiLocale = nextLocale;
   project.locale = nextLocale;
-  syncDefaultOpeningHeadings();
   steps = makeSteps();
   document.documentElement.lang = nextLocale;
   localStorage.setItem(studioLanguageKey, nextLocale);
-}
-
-function syncDefaultOpeningHeadings() {
-  project.headings ??= defaultHeadings(project.locale);
-  const giftUi = getGiftUi(project.locale);
-  project.headings.openingTitle = giftUi.gateTitle;
-  project.headings.openingEmphasis = giftUi.gateEmphasis;
 }
 
 function requestTitlePresets(locale: Locale) {
@@ -245,20 +231,6 @@ function notePresets(locale: Locale) {
         funny: 'Aku pergi sebentar, bukan menghilang dari peradaban. HP tetap aktif, kabar tetap jalan, dan aku pulang sesuai kesepakatan.',
         direct: 'Aku akan memberi kabar setelah sampai, mengabari kalau rencana berubah, dan pulang sesuai estimasi.',
       };
-}
-
-function demoHeadings(locale: Locale): NonNullable<IzinMainProject['headings']> {
-  return locale === 'en' ? {
-    openingTitle: 'Official Request',
-    openingEmphasis: 'Going-Out Permit',
-    summaryTitle: 'I want to go out for a while.\nHere is the complete plan.',
-    partiesTitle: 'The applicant & the one holding the stamp.',
-    planTitle: 'More than just “I’ll be out for a bit”.',
-    commitmentsTitle: 'Small promises to help you feel at ease.',
-    defenseTitle: 'The applicant’s honest version.',
-    decisionTitle: 'The final stamp is in your hands.',
-    endingTitle: 'The official permit has been issued.',
-  } : structuredClone(demoProject.headings!);
 }
 
 function localizedDefaults(locale: Locale) {
@@ -305,15 +277,7 @@ function localizedDefaults(locale: Locale) {
 
 function translatePresetBackedContent(from: Locale, to: Locale) {
   if (from === to) return;
-  project.headings ??= defaultHeadings(from);
   const tones: PresetTone[] = ['playful', 'warm', 'official', 'formal'];
-  const oldHeadingSets = [defaultHeadings(from), demoHeadings(from), ...tones.map((tone) => headingPreset(tone, from))];
-  const newHeadingSets = [defaultHeadings(to), demoHeadings(to), ...tones.map((tone) => headingPreset(tone, to))];
-  (Object.keys(project.headings) as Array<keyof NonNullable<IzinMainProject['headings']>>).forEach((key) => {
-    const match = oldHeadingSets.findIndex((set) => set[key] === project.headings![key]);
-    if (match >= 0) project.headings![key] = newHeadingSets[match][key];
-  });
-
   const replaceKnown = (value: string, oldValues: string[], newValues: string[]) => {
     const index = oldValues.indexOf(value);
     return index >= 0 ? newValues[index] : value;
@@ -485,37 +449,15 @@ function photoUpload(kind: 'applicant' | 'recipient', label: string, name: strin
 type HeadingSection = 'summary' | 'parties' | 'plan' | 'commitments' | 'defense' | 'decision' | 'ending';
 type PresetTone = 'playful' | 'warm' | 'official' | 'formal';
 
-const headingFields: Record<HeadingSection, keyof NonNullable<IzinMainProject['headings']>> = {
-  summary: 'summaryTitle',
-  parties: 'partiesTitle',
-  plan: 'planTitle',
-  commitments: 'commitmentsTitle',
-  defense: 'defenseTitle',
-  decision: 'decisionTitle',
-  ending: 'endingTitle',
-};
-
-function sectionTitleEditor(section: HeadingSection) {
-  const descriptions: Record<HeadingSection, string> = {
-    summary: c().summaryHeadingDescription,
-    parties: c().partiesHeadingDescription,
-    plan: c().planHeadingDescription,
-    commitments: c().commitmentsHeadingDescription,
-    defense: c().defenseHeadingDescription,
-    decision: c().decisionHeadingDescription,
-    ending: c().endingHeadingDescription,
-  };
+function sectionPresetPicker(section: HeadingSection) {
   return `<fieldset class="choice-fieldset section-title-card">
-    <legend>${c().sectionTitle}</legend>
-    <p>${descriptions[section]}</p>
+    <legend>${c().choosePreset}</legend>
     <div class="section-title-card__presets">
-      <span>${icon('spark')} ${c().choosePreset}</span>
       <button type="button" data-section-preset="${section}:playful">${c().playful}</button>
       <button type="button" data-section-preset="${section}:warm">${c().warm}</button>
       <button type="button" data-section-preset="${section}:official">${c().officialFunny}</button>
       <button type="button" data-section-preset="${section}:formal">${c().formal}</button>
     </div>
-    ${field(c().sectionTitle, `headings.${headingFields[section]}`, project.headings![headingFields[section]], { required: true })}
     <small class="section-title-card__hint">${c().presetEditableHint}</small>
   </fieldset>`;
 }
@@ -524,7 +466,7 @@ function renderStepContent() {
   if (currentStep === 0) return `
     <div class="form-section">
       <div class="form-section__title"><span>01</span><div><h2>${c().partiesEditorTitle}</h2><p>${c().partiesEditorText}</p></div></div>
-      ${sectionTitleEditor('parties')}
+      ${sectionPresetPicker('parties')}
       <div class="photo-grid">
         ${photoUpload('applicant', c().applicantPhoto, project.applicant.name, project.applicant.photoUrl)}
         ${photoUpload('recipient', c().recipientPhoto, project.recipient.name, project.recipient.photoUrl)}
@@ -542,10 +484,10 @@ function renderStepContent() {
   if (currentStep === 1) return `
     <div class="form-section">
       <div class="form-section__title"><span>02</span><div><h2>${c().summaryEditorTitle}</h2><p>${c().summaryEditorText}</p></div></div>
-      ${sectionTitleEditor('summary')}
+      ${sectionPresetPicker('summary')}
       ${field(c().requestTitle, 'request.title', project.request.title, { placeholder: uiLocale === 'id' ? 'Contoh: Nongkrong sebentar, pulang tetap sayang' : 'Example: Out for a while, home with a smile', required: true, hint: c().requestTitleHint })}
       <div class="form-section__title form-section__title--continued"><span>B</span><div><h2>${c().planEditorTitle}</h2><p>${c().planEditorText}</p></div></div>
-      ${sectionTitleEditor('plan')}
+      ${sectionPresetPicker('plan')}
       ${textarea(c().activity, 'request.activity', project.request.activity, { placeholder: uiLocale === 'id' ? 'Contoh: makan ramen lalu main board game' : 'Example: ramen and a board-game night', hint: c().activityHint, maxlength: 240, required: true })}
       <div class="field-grid field-grid--three">
         ${field(c().date, 'request.date', project.request.date, { type: 'date', required: true })}
@@ -564,7 +506,7 @@ function renderStepContent() {
   if (currentStep === 2) return `
     <div class="form-section">
       <div class="form-section__title"><span>03</span><div><h2>${c().commitmentsEditorTitle}</h2><p>${c().commitmentsEditorText}</p></div></div>
-      ${sectionTitleEditor('commitments')}
+      ${sectionPresetPicker('commitments')}
       <div class="commitment-editor">
         ${project.commitments.map((item, index) => `<label class="commitment-editor__item ${item.enabled ? 'is-enabled' : ''}"><input type="checkbox" data-commitment-index="${index}" data-commitment-key="enabled" ${item.enabled ? 'checked' : ''} /><span>${item.enabled ? icon('check') : ''}</span><input type="text" data-commitment-index="${index}" data-commitment-key="text" value="${escapeHtml(item.text)}" maxlength="120" aria-label="${c().commitmentLabel} ${index + 1}" /><small>${String(index + 1).padStart(2, '0')}</small></label>`).join('')}
       </div>
@@ -573,19 +515,19 @@ function renderStepContent() {
   if (currentStep === 3) return `
     <div class="form-section">
       <div class="form-section__title"><span>04</span><div><h2>${c().noteEditorTitle}</h2><p>${c().noteEditorText}</p></div></div>
-      ${sectionTitleEditor('defense')}
+      ${sectionPresetPicker('defense')}
       ${textarea(c().applicantMessage, 'defenseNote', project.defenseNote, { placeholder: uiLocale === 'id' ? 'Tulis alasan jujurmu dan bagaimana kamu akan menjaga kepercayaan…' : 'Share your honest reason and how you will keep their trust…', hint: c().applicantMessageHint, maxlength: 500, required: true })}
     </div>`;
 
   if (currentStep === 4) return `
     <div class="form-section">
       <div class="form-section__title"><span>05</span><div><h2>${c().decisionEditorTitle}</h2><p>${c().decisionEditorText}</p></div></div>
-      ${sectionTitleEditor('decision')}
+      ${sectionPresetPicker('decision')}
       ${field(c().decisionEyebrow, 'decision.eyebrow', project.decision.eyebrow || '', { placeholder: uiLocale === 'id' ? 'Semua detail sudah dibaca…' : 'Every detail has been read…' })}
       ${field(c().finalQuestion, 'decision.question', project.decision.question, { placeholder: uiLocale === 'id' ? 'Jadi… boleh aku main sebentar?' : 'So… may I go out for a while?', required: true })}
       ${field(c().approvalButton, 'decision.approvedLabel', project.decision.approvedLabel, { placeholder: uiLocale === 'id' ? 'Disetujui' : 'Approved', required: true })}
       <div class="form-section__title form-section__title--continued"><span>C</span><div><h2>${c().endingEditorTitle}</h2><p>${c().endingEditorText}</p></div></div>
-      ${sectionTitleEditor('ending')}
+      ${sectionPresetPicker('ending')}
       ${textarea(c().approvedMessage, 'decision.approvedMessage', project.decision.approvedMessage, { placeholder: uiLocale === 'id' ? 'Terima kasih sudah percaya…' : 'Thank you for trusting me…', maxlength: 320, required: true })}
       ${field(c().permitCardTitle, 'card.title', project.card.title, { placeholder: uiLocale === 'id' ? 'Surat Izin Main Resmi' : 'Official Going-Out Permit', required: true })}
       ${textarea(c().permitCardFooter, 'card.footer', project.card.footer || '', { placeholder: uiLocale === 'id' ? 'Sah selama tetap memberi kabar…' : 'Valid while updates are given…', maxlength: 220 })}
@@ -903,53 +845,6 @@ async function compressImage(file: File): Promise<{ blob: Blob; dataUrl: string 
   return { blob, dataUrl: canvas.toDataURL('image/webp', .78) };
 }
 
-function defaultHeadings(locale: Locale): NonNullable<IzinMainProject['headings']> {
-  const ui = getGiftUi(locale);
-  return {
-    openingTitle: ui.gateTitle,
-    openingEmphasis: ui.gateEmphasis,
-    summaryTitle: ui.summaryTitle,
-    partiesTitle: ui.partiesTitle,
-    planTitle: ui.planTitle,
-    commitmentsTitle: ui.commitmentTitle,
-    defenseTitle: ui.defenseTitle,
-    decisionTitle: ui.decisionTitle,
-    endingTitle: ui.completeTitle,
-  };
-}
-
-function headingPreset(tone: PresetTone, locale: Locale): NonNullable<IzinMainProject['headings']> {
-  const id: Record<string, NonNullable<IzinMainProject['headings']>> = {
-    playful: {
-      openingTitle: 'Berkas Rahasia', openingEmphasis: 'Mau Main', summaryTitle: 'Aku punya rencana.\nKali ini lengkap, kok.', partiesTitle: 'Yang pergi & yang pegang stempel.', planTitle: 'Biar nggak ada jawaban “lihat nanti”.', commitmentsTitle: 'Janji yang nggak cuma jadi wacana.', defenseTitle: 'Pembelaan singkat dari tersangka.', decisionTitle: 'Satu stempel sebelum aku berangkat.', endingTitle: 'Operasi main resmi disetujui.',
-    },
-    warm: {
-      openingTitle: 'Satu Rencana', openingEmphasis: 'Untuk Kamu', summaryTitle: 'Aku mau pergi sebentar.\nTapi tetap ingin kamu tenang.', partiesTitle: 'Aku yang mengajukan, kamu yang kupercaya.', planTitle: 'Semua detail yang ingin kamu tahu.', commitmentsTitle: 'Hal kecil yang akan aku jaga.', defenseTitle: 'Sedikit isi hati sebelum pergi.', decisionTitle: 'Kalau semuanya sudah terasa pas…', endingTitle: 'Terima kasih sudah mempercayaiku.',
-    },
-    official: {
-      openingTitle: 'Permohonan Resmi', openingEmphasis: 'Izin Main', summaryTitle: 'Ringkasan pengajuan\nyang sangat serius.', partiesTitle: 'Pemohon dan pejabat pemberi stempel.', planTitle: 'Lampiran rencana perjalanan singkat.', commitmentsTitle: 'Pernyataan tanggung jawab pemohon.', defenseTitle: 'Nota pembelaan yang jujur.', decisionTitle: 'Meja persetujuan akhir.', endingTitle: 'Surat izin resmi telah diterbitkan.',
-    },
-    formal: {
-      openingTitle: 'Dokumen Permohonan', openingEmphasis: 'Izin Kegiatan', summaryTitle: 'Ringkasan permohonan\nkegiatan di luar.', partiesTitle: 'Identitas pihak pemohon dan penerima.', planTitle: 'Rincian jadwal dan rencana kegiatan.', commitmentsTitle: 'Pernyataan komitmen dan tanggung jawab.', defenseTitle: 'Keterangan tambahan dari pemohon.', decisionTitle: 'Lembar persetujuan permohonan.', endingTitle: 'Surat persetujuan telah diterbitkan.',
-    },
-  };
-  const en: Record<string, NonNullable<IzinMainProject['headings']>> = {
-    playful: {
-      openingTitle: 'Secret File', openingEmphasis: 'Going Out', summaryTitle: 'I have a plan.\nA complete one this time.', partiesTitle: 'The one going out & the stamp holder.', planTitle: 'No more “I’ll tell you later”.', commitmentsTitle: 'Promises that are more than talk.', defenseTitle: 'A short defense from the suspect.', decisionTitle: 'One stamp before I head out.', endingTitle: 'Going-out mission officially approved.',
-    },
-    warm: {
-      openingTitle: 'A Small Plan', openingEmphasis: 'For You', summaryTitle: 'I want to go out for a while.\nAnd help you feel at ease.', partiesTitle: 'I am asking because I trust you.', planTitle: 'Every detail you may want to know.', commitmentsTitle: 'The small things I promise to keep.', defenseTitle: 'A little note before I go.', decisionTitle: 'If everything feels right…', endingTitle: 'Thank you for trusting me.',
-    },
-    official: {
-      openingTitle: 'Official Request', openingEmphasis: 'Going-Out Permit', summaryTitle: 'A very serious\nrequest summary.', partiesTitle: 'The applicant and official stamp holder.', planTitle: 'Attached short-trip itinerary.', commitmentsTitle: 'Applicant responsibility statement.', defenseTitle: 'An honest defense memorandum.', decisionTitle: 'Final approval desk.', endingTitle: 'The official permit has been issued.',
-    },
-    formal: {
-      openingTitle: 'Application Document', openingEmphasis: 'Activity Permit', summaryTitle: 'Summary of the\nactivity application.', partiesTitle: 'Applicant and recipient identification.', planTitle: 'Schedule and activity plan details.', commitmentsTitle: 'Statement of commitment and responsibility.', defenseTitle: 'Additional applicant statement.', decisionTitle: 'Application approval sheet.', endingTitle: 'The approval document has been issued.',
-    },
-  };
-  return (locale === 'en' ? en : id)[tone] || defaultHeadings(locale);
-}
-
 interface SectionPresetCopy {
   requestTitle: string;
   applicantRole: string;
@@ -1086,8 +981,6 @@ function sectionPresetCopy(locale: Locale, tone: PresetTone): SectionPresetCopy 
 }
 
 function openSectionPreset(section: HeadingSection, tone: PresetTone) {
-  const current = project.headings ?? defaultHeadings(project.locale);
-  const next = headingPreset(tone, project.locale);
   const copy = sectionPresetCopy(project.locale, tone);
   const labels: Record<HeadingSection, string> = {
     summary: c().summarySectionName,
@@ -1100,8 +993,6 @@ function openSectionPreset(section: HeadingSection, tone: PresetTone) {
   };
   const changes: PresetChange[] = [];
   const add = (label: string, before: string | undefined, after: string, apply: () => void) => changes.push({ label, before: before || '', after, apply });
-  add(c().sectionTitle, current[headingFields[section]], next[headingFields[section]], () => { project.headings![headingFields[section]] = next[headingFields[section]]; });
-
   if (section === 'summary') add(c().requestTitle, project.request.title, copy.requestTitle, () => { project.request.title = copy.requestTitle; });
   if (section === 'parties') {
     add(c().applicantRole, project.applicant.role, copy.applicantRole, () => { project.applicant.role = copy.applicantRole; });

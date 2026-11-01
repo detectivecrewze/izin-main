@@ -85,23 +85,18 @@
 }
 :root[data-template="permit-desk"] .gift-page .desk-sheet > * { width: 100%; margin-left: 0; margin-right: 0; }
 :root[data-template="permit-desk"] .gift-page .section-heading {
-  display: block;
-  margin: 0 0 22px;
-  padding: 8px 0 17px;
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin: 0 0 16px;
+  padding: 2px 0 12px;
   border-bottom: 1px solid var(--line);
 }
 :root[data-template="permit-desk"] .section-heading > span {
-  display: block;
-  padding: 0 0 10px;
+  padding: 0;
   font-size: 9px;
 }
-:root[data-template="permit-desk"] .section-heading p { font-size: 8px; }
-:root[data-template="permit-desk"] .gift-page .section-heading h2 {
-  max-width: 100%;
-  font-size: clamp(30px, 3vw, 35px);
-  line-height: 1.06;
-  overflow-wrap: anywhere;
-}
+:root[data-template="permit-desk"] .section-heading p { margin: 0; font-size: 9px; }
 :root[data-template="permit-desk"] .summary-grid,
 :root[data-template="permit-desk"] .plan-layout { display: block; }
 :root[data-template="permit-desk"] .summary-paper,
@@ -178,14 +173,12 @@
 @media (max-width: 760px) {
   :root[data-template="permit-desk"] .gift-page { padding-inline: 13px; }
   :root[data-template="permit-desk"] .gift-page .desk-sheet { width: min(100%, 430px); padding: 22px 19px; }
-  :root[data-template="permit-desk"] .gift-page .section-heading h2 { font-size: clamp(30px, 8vw, 38px); }
   :root[data-template="permit-desk"] .identity-file__people { grid-template-columns: minmax(0, 1fr) 26px minmax(0, 1fr); }
 }
 @media (max-width: 360px) {
   :root[data-template="permit-desk"] .folder h1 { font-size: 40px; letter-spacing: -.045em; }
   :root[data-template="permit-desk"] .gift-page { padding-inline: 9px; }
   :root[data-template="permit-desk"] .gift-page .desk-sheet { padding: 19px 15px; }
-  :root[data-template="permit-desk"] .gift-page .section-heading h2 { font-size: 27px; }
   :root[data-template="permit-desk"] .summary-paper h3,
   :root[data-template="permit-desk"] .decision-file h3 { font-size: 28px; }
   :root[data-template="permit-desk"] .person-card figcaption strong { font-size: 15px; }

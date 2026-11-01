@@ -77,20 +77,6 @@ const escapeHtml = (value: unknown) => String(value ?? '')
   .replaceAll('>', '&gt;')
   .replaceAll('"', '&quot;')
   .replaceAll("'", '&#039;');
-const headings = {
-  summaryTitle: ui.summaryTitle,
-  partiesTitle: ui.partiesTitle,
-  planTitle: ui.planTitle,
-  commitmentsTitle: ui.commitmentTitle,
-  defenseTitle: ui.defenseTitle,
-  decisionTitle: ui.decisionTitle,
-  endingTitle: ui.completeTitle,
-  ...project.headings,
-  // The cover is a product-level visual and follows the selected gift
-  // language. Customers edit the content inside the file, not this label.
-  openingTitle: ui.gateTitle,
-  openingEmphasis: ui.gateEmphasis,
-};
 const root = document.querySelector<HTMLDivElement>('#app');
 
 if (!root) throw new Error('App root is missing');
@@ -153,7 +139,7 @@ root.innerHTML = `
           <span class="folder__seal" aria-hidden="true"></span>
           <div class="folder__content">
             <span class="micro-label">${strings.agency}</span>
-            <h1 id="gate-title">${headings.openingTitle}<br><em>${headings.openingEmphasis}</em></h1>
+            <h1 id="gate-title">${ui.gateTitle}<br><em>${ui.gateEmphasis}</em></h1>
             <div class="gate__meta">
               <span>${strings.requestNo}</span>
               <strong>${project.requestNumber}</strong>
@@ -174,7 +160,7 @@ root.innerHTML = `
     <section class="summary-section section-pad gift-page" data-page="summary" aria-labelledby="summary-title">
       <div class="section-heading reveal">
         <span>01 / 07</span>
-        <div><p>${strings.summary}</p><h2 id="summary-title">${headings.summaryTitle.replace('\n', '<br>')}</h2></div>
+        <p id="summary-title">${strings.summary}</p>
       </div>
       <div class="summary-grid">
         <article class="summary-paper reveal">
@@ -200,7 +186,7 @@ root.innerHTML = `
     <section class="profile-section section-pad gift-page" data-page="profile" aria-labelledby="profile-title">
       <div class="section-heading reveal">
         <span>02 / 07</span>
-        <div><p>${ui.partiesEyebrow}</p><h2 id="profile-title">${headings.partiesTitle}</h2></div>
+        <p id="profile-title">${ui.partiesEyebrow}</p>
       </div>
       <article class="identity-file reveal">
         <div class="identity-file__people">
@@ -234,7 +220,7 @@ root.innerHTML = `
     <section class="plan-section section-pad gift-page" data-page="plan" aria-labelledby="plan-title">
       <div class="section-heading reveal">
         <span>03 / 07</span>
-        <div><p>${strings.plan}</p><h2 id="plan-title">${headings.planTitle}</h2></div>
+        <p id="plan-title">${strings.plan}</p>
       </div>
       <div class="plan-layout">
         <article class="plan-form reveal">
@@ -265,7 +251,7 @@ root.innerHTML = `
     <section class="commitment-section section-pad gift-page" data-page="commitments" aria-labelledby="commitment-title">
       <div class="section-heading reveal">
         <span>04 / 07</span>
-        <div><p>${strings.commitments}</p><h2 id="commitment-title">${headings.commitmentsTitle}</h2></div>
+        <p id="commitment-title">${strings.commitments}</p>
       </div>
       <article class="commitment-sheet reveal">
         <div class="commitment-sheet__header"><span>${ui.applicantChecklist}</span><small>${ui.checkAfterRead}</small></div>
@@ -279,7 +265,7 @@ root.innerHTML = `
     <section class="defense-section section-pad gift-page" data-page="defense" aria-labelledby="defense-title">
       <div class="section-heading reveal">
         <span>05 / 07</span>
-        <div><p>${strings.defense}</p><h2 id="defense-title">${headings.defenseTitle}</h2></div>
+        <p id="defense-title">${strings.defense}</p>
       </div>
       <article class="memo reveal">
         <span class="memo__tape" aria-hidden="true"></span>
@@ -292,7 +278,7 @@ root.innerHTML = `
     <section class="decision-section section-pad gift-page" data-page="decision" aria-labelledby="decision-title">
       <div class="section-heading reveal">
         <span>06 / 07</span>
-        <div><p>${strings.decision}</p><h2 id="decision-title">${headings.decisionTitle}</h2></div>
+        <p id="decision-title">${strings.decision}</p>
       </div>
       <article class="decision-file reveal" id="decision-file">
         <p class="document-kicker">${project.decision.eyebrow}</p>
@@ -308,7 +294,7 @@ root.innerHTML = `
     <section class="permit-section section-pad gift-page" data-page="permit" id="permit-section" aria-labelledby="permit-title" hidden>
       <div class="section-heading reveal is-visible">
         <span>07 / 07</span>
-        <div><p>${ui.completeEyebrow}</p><h2 id="permit-title">${headings.endingTitle}</h2></div>
+        <p id="permit-title">${ui.completeEyebrow}</p>
       </div>
       <div class="permit-printer" id="permit-printer">
         <div class="permit-printer__machine"><span>${ui.office}</span><i></i></div>

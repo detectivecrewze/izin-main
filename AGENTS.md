@@ -33,7 +33,7 @@ Copy harus netral gender dan hangat. Keputusan produk terbaru hanya menampilkan 
 - Pastikan field opsional tidak meninggalkan ruang kosong atau label yatim. `companions`, `venue`, `address`, dan `mapsUrl` boleh kosong.
 - Foto pemohon dan foto penerima adalah dua field/upload terpisah; keduanya opsional dan tidak boleh saling menimpa.
 - Musik berasal dari data project. Studio fase berikutnya memakai katalog `public/playlist.json` yang sama dengan produk lain atau upload customer, bukan daftar lagu hardcode di renderer.
-- Judul opening, setiap lembar, dan ending berasal dari data project. Studio menempatkan editor judul dan tiga preset langsung di section yang bersangkutan—bukan dikumpulkan di halaman gaya—agar alurnya mudah dipahami. Preset tidak boleh mengubah fakta customer.
+- Sampul berkas memakai judul bawaan sesuai bahasa gift. Setiap lembar isi hanya menampilkan nomor dan label kecil, tanpa judul besar di atas kontennya. Studio tidak menampilkan editor judul lembar; preset per section tetap boleh mengganti teks isi yang relevan tanpa mengubah fakta customer. Judul rencana di ringkasan dan judul kartu izin adalah bagian isi dokumen yang tetap bisa diedit.
 - Studio selalu dimulai dengan pilihan Bahasa Indonesia atau English. Pilihan ini mengatur bahasa seluruh UI Studio, fixed UI gift, dan semua preset. Pergantian bahasa hanya menerjemahkan copy default/preset yang dikenali; tulisan custom customer tidak boleh ditimpa otomatis.
 - Gesture `Buka berkas` adalah titik autoplay yang sah; kegagalan audio tidak boleh mengunci gift dan kontrol on/off berbentuk tombol musik SVG ringkas di pojok kanan atas harus tetap tersedia tanpa menutupi dokumen.
 

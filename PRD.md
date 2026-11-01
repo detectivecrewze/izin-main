@@ -1,5 +1,7 @@
 # PRD — Izin Main
 
+> Keputusan desain terbaru: gift memakai kartu dokumen Meja Perizinan. Tujuh lembar isi hanya memakai nomor dan label kecil; judul besar di atas setiap lembar dan kolom edit judul tersebut di Studio dihapus. Judul rencana dalam ringkasan dan judul kartu izin tetap menjadi isi yang dapat diedit. Ketentuan lama tentang editor judul lembar di bawah ini digantikan oleh keputusan ini.
+
 ## 1. Ringkasan produk
 
 **Izin Main** adalah kado digital self-edit berbentuk permohonan izin yang lucu, personal, dan terasa seperti berkas administrasi hubungan. Customer menyusun permohonannya sendiri melalui Studio, lalu mengirim gift kepada pasangan. Penerima membuka map permohonan, memeriksa rencana, membaca komitmen dan pesan personal, lalu menekan **Disetujui** untuk menerbitkan kartu izin digital.

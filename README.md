@@ -1,6 +1,6 @@
 # Izin Main
 
-Izin Main adalah gift digital self-edit berbentuk permohonan pergi yang personal, lucu, dan jelas. Customer menyusun berkas melalui Studio, memilih judul, gaya, dan soundtrack, lalu membagikan gift kepada pasangan untuk disetujui.
+Izin Main adalah gift digital self-edit berbentuk permohonan pergi yang personal, lucu, dan jelas. Customer menyusun berkas melalui Studio, memilih isi dokumen, gaya, dan soundtrack, lalu membagikan gift kepada pasangan untuk disetujui.
 
 ## Status proyek
 
@@ -42,7 +42,7 @@ Customer Studio lokal tersedia melalui:
 /studio/permit-adit-001?token=demo-access
 ```
 
-Studio diawali pilihan Bahasa Indonesia atau English yang berlaku sekaligus untuk UI Studio, fixed UI gift, dan semua preset. Bahasa juga dapat diganti dari header; hanya copy default/preset yang dikenali yang ikut berubah, sedangkan tulisan custom customer selalu dipertahankan. Studio diringkas menjadi tujuh langkah: Opening & Identitas, Ringkasan & Rencana, Komitmen, Catatan, Keputusan & Ending, Gaya & Musik, lalu Publish. Editor judul berada bersama isi halaman yang bersangkutan agar customer tidak bolak-balik. Pada project Worker, autosave menyimpan draft ke KV, upload foto/musik masuk R2, publish membuat record gift terpisah, dan respons penerima kembali terlihat di Studio.
+Studio diawali pilihan Bahasa Indonesia atau English yang berlaku sekaligus untuk UI Studio, fixed UI gift, dan semua preset. Bahasa juga dapat diganti dari header; hanya copy default/preset yang dikenali yang ikut berubah, sedangkan tulisan custom customer selalu dipertahankan. Studio memiliki tujuh langkah: Identitas, Ringkasan & Rencana, Komitmen, Catatan, Keputusan & Ending, Gaya & Musik, lalu Publish. Judul besar di atas setiap lembar gift sudah dihapus; Studio cukup mengedit isi dokumen dan menyediakan preset per section. Judul rencana di ringkasan dan judul kartu izin tetap dapat diisi. Pada project Worker, autosave menyimpan draft ke KV, upload foto/musik masuk R2, publish membuat record gift terpisah, dan respons penerima kembali terlihat di Studio.
 
 Dashboard internal tersedia di `/admin`. Token hanya disimpan pada `sessionStorage` tab browser. Dashboard dapat membuat project idempotent, memfilter status, membuka Studio untuk support, menyalin link gift, menerbitkan ulang akses Studio, dan melihat error fulfillment.
 
