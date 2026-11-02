@@ -263,7 +263,6 @@ root.innerHTML = `
         <ol>
           ${enabledCommitments.map((item, index) => `<li style="--delay:${index * 90}ms"><span>${icon('check')}</span><p>${item.text}</p><small>0${index + 1}</small></li>`).join('')}
         </ol>
-        <div class="commitment-sheet__footer"><span>${project.applicant.nickname || project.applicant.name}</span><i></i><small>${strings.inspected}</small></div>
       </article>
     </section>
 
