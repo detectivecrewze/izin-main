@@ -36,6 +36,7 @@ export interface IzinMainProject {
   };
   request: {
     title: string;
+    summaryIntro?: string;
     activity: string;
     date: string;
     departureTime: string;

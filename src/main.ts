@@ -123,6 +123,10 @@ const enabledCommitments = project.commitments.filter((item) => item.enabled).so
 const mapUrl = safeExternalUrl(project.request.mapsUrl);
 const musicAudioUrl = safeMediaUrl(project.music?.audioUrl, Boolean(studioPreviewId));
 const recipientDisplay = project.recipient.nickname || project.recipient.name;
+const summaryIntro = project.request.summaryIntro === undefined
+  ? ui.summaryIntroTemplate
+  : project.request.summaryIntro;
+const renderedSummaryIntro = summaryIntro.replaceAll('{nama}', recipientDisplay).replaceAll('{name}', recipientDisplay);
 const requestDateParts = getGiftDateParts(project.request.date, project.locale);
 
 root.innerHTML = `
@@ -168,7 +172,7 @@ root.innerHTML = `
           <span class="paperclip" aria-hidden="true"></span>
           <p class="document-kicker">${ui.requestLabel} / ${project.requestNumber}</p>
           <h3>${project.request.title}</h3>
-          <p class="summary-intro">${ui.summaryPrefix} <strong>${recipientDisplay}</strong>, ${ui.summarySuffix}</p>
+          <p class="summary-intro">${escapeHtml(renderedSummaryIntro)}</p>
           <div class="summary-table">
             ${detailRow(strings.applicantName, project.applicant.name)}
             ${detailRow(strings.date, formatGiftDate(project.request.date, project.locale))}

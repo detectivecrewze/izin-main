@@ -12,6 +12,7 @@ import QRCode from 'qrcode';
 
 import { ApiError, loadStudioProject, publishStudioGift, saveStudioDraft, uploadStudioMedia } from './api';
 import { demoProject } from './demo';
+import { getGiftUi } from './gift-ui';
 import { validateProject, type IzinMainProject, type Locale, type ThemeId } from './project';
 import { studioText } from './studio-copy';
 import { themes } from './themes';
@@ -298,6 +299,7 @@ function translatePresetBackedContent(from: Locale, to: Locale) {
     return match >= 0 ? newPackages[match][key] : value;
   };
   project.request.title = swapPackageField(project.request.title, 'requestTitle') || project.request.title;
+  project.request.summaryIntro = swapPackageField(project.request.summaryIntro, 'summaryIntro');
   project.applicant.intro = swapPackageField(project.applicant.intro, 'applicantIntro');
   project.request.note = swapPackageField(project.request.note, 'planNote');
   project.defenseNote = swapPackageField(project.defenseNote, 'defenseNote') || project.defenseNote;
@@ -482,6 +484,7 @@ function renderStepContent() {
       <div class="form-section__title"><span>02</span><div><h2>${c().summaryEditorTitle}</h2><p>${c().summaryEditorText}</p></div></div>
       ${sectionPresetPicker('summary')}
       ${field(c().requestTitle, 'request.title', project.request.title, { placeholder: uiLocale === 'id' ? 'Contoh: Nongkrong sebentar, pulang tetap sayang' : 'Example: Out for a while, home with a smile', required: true, hint: c().requestTitleHint })}
+      ${textarea(c().summaryIntro, 'request.summaryIntro', project.request.summaryIntro ?? getGiftUi(project.locale).summaryIntroTemplate, { hint: c().summaryIntroHint, maxlength: 500 })}
       <div class="form-section__title form-section__title--continued"><span>B</span><div><h2>${c().planEditorTitle}</h2><p>${c().planEditorText}</p></div></div>
       ${sectionPresetPicker('plan')}
       ${textarea(c().activity, 'request.activity', project.request.activity, { placeholder: uiLocale === 'id' ? 'Contoh: makan ramen lalu main board game' : 'Example: ramen and a board-game night', hint: c().activityHint, maxlength: 240, required: true })}
@@ -843,6 +846,7 @@ async function compressImage(file: File): Promise<{ blob: Blob; dataUrl: string 
 
 interface SectionPresetCopy {
   requestTitle: string;
+  summaryIntro: string;
   applicantIntro: string;
   planNote: string;
   commitments: string[];
@@ -859,6 +863,7 @@ function sectionPresetCopy(locale: Locale, tone: PresetTone): SectionPresetCopy 
   const id: Record<PresetTone, SectionPresetCopy> = {
     playful: {
       requestTitle: 'Operasi main sebentar, pulang bawa cerita',
+      summaryIntro: 'Buat {nama}, biar semua rencana jelas dan aku nggak perlu menjawab “lihat nanti, ya.”',
       applicantIntro: 'Daripada cuma bilang “nanti aku kabari”, kali ini aku datang membawa berkas, rencana, dan niat baik yang hampir resmi.',
       planNote: 'Kalau rencana berubah, aku kabari dulu. Tidak ada adegan menghilang lalu muncul dengan chat “hehe”.',
       commitments: ['Kasih kabar begitu sampai', 'HP tidak mendadak berubah jadi batu', 'Izin dulu sebelum pindah tempat', 'Pulang sesuai jam yang disepakati', 'Besok tetap ada waktu khusus buat kita'],
@@ -872,6 +877,7 @@ function sectionPresetCopy(locale: Locale, tone: PresetTone): SectionPresetCopy 
     },
     warm: {
       requestTitle: 'Pergi sebentar, tetap pulang kepadamu',
+      summaryIntro: 'Buat {nama}, supaya kamu tahu rencanaku dan tetap merasa tenang saat aku pergi.',
       applicantIntro: 'Aku membuat berkas kecil ini supaya kamu tahu seluruh rencanaku dan tetap merasa tenang selama aku pergi.',
       planNote: 'Kalau ada perubahan apa pun, kamu akan jadi orang pertama yang aku kabari.',
       commitments: ['Aku akan memberi kabar setelah sampai', 'Aku tetap mudah dihubungi', 'Aku akan mengabari jika tempat berubah', 'Aku pulang sesuai waktu yang kita sepakati', 'Aku tetap menyisakan waktu khusus untuk kita'],
@@ -885,6 +891,7 @@ function sectionPresetCopy(locale: Locale, tone: PresetTone): SectionPresetCopy 
     },
     official: {
       requestTitle: 'Permohonan Izin Main yang Sangat Serius',
+      summaryIntro: 'Buat {nama}, seluruh rincian permohonan sudah disusun agar mudah diperiksa.',
       applicantIntro: 'Pemohon dengan ini mengajukan izin kegiatan singkat dan melampirkan detail yang diperlukan untuk pertimbangan pejabat pemberi stempel.',
       planNote: 'Setiap perubahan rencana wajib dilaporkan kepada pejabat pemberi stempel sebelum dilaksanakan.',
       commitments: ['Melapor setelah tiba di lokasi', 'Menjaga perangkat komunikasi tetap aktif', 'Melapor sebelum berpindah tempat', 'Pulang sesuai estimasi yang disepakati', 'Membawa pulang cerita sebagai laporan akhir'],
@@ -898,6 +905,7 @@ function sectionPresetCopy(locale: Locale, tone: PresetTone): SectionPresetCopy 
     },
     formal: {
       requestTitle: 'Permohonan Izin Kegiatan di Luar',
+      summaryIntro: 'Buat {nama}, dokumen ini merangkum informasi kegiatan secara jelas dan lengkap.',
       applicantIntro: 'Dokumen ini diajukan untuk menyampaikan rencana kegiatan secara jelas dan lengkap kepada pihak penerima.',
       planNote: 'Setiap perubahan waktu, tempat, atau susunan kegiatan akan disampaikan kepada penerima sebelum perubahan dilakukan.',
       commitments: ['Memberikan kabar setelah tiba di lokasi', 'Tetap dapat dihubungi selama kegiatan berlangsung', 'Menyampaikan setiap perubahan rencana', 'Kembali sesuai estimasi yang telah disampaikan', 'Menjaga keselamatan dan kepercayaan penerima'],
@@ -913,6 +921,7 @@ function sectionPresetCopy(locale: Locale, tone: PresetTone): SectionPresetCopy 
   const en: Record<PresetTone, SectionPresetCopy> = {
     playful: {
       requestTitle: 'A short mission, with stories on the way home',
+      summaryIntro: 'For {name}, so every detail is clear and there is no “I’ll tell you later.”',
       applicantIntro: 'Instead of saying “I’ll tell you later”, I brought a file, a plan, and an almost-official amount of good intention.',
       planNote: 'If the plan changes, I will tell you first. No disappearing act followed by a tiny “hehe”.',
       commitments: ['Text as soon as I arrive', 'Keep my phone from turning into a brick', 'Ask before moving somewhere else', 'Come home around the agreed time', 'Save special time for us tomorrow'],
@@ -926,6 +935,7 @@ function sectionPresetCopy(locale: Locale, tone: PresetTone): SectionPresetCopy 
     },
     warm: {
       requestTitle: 'Out for a while, still coming home to you',
+      summaryIntro: 'For {name}, so you know the plan and can feel at ease while I am away.',
       applicantIntro: 'I made this little file so you know the whole plan and can feel at ease while I am away.',
       planNote: 'If anything changes, you will be the first person I tell.',
       commitments: ['I will let you know when I arrive', 'I will stay easy to reach', 'I will tell you if the venue changes', 'I will be home around our agreed time', 'I will still save special time for us'],
@@ -939,6 +949,7 @@ function sectionPresetCopy(locale: Locale, tone: PresetTone): SectionPresetCopy 
     },
     official: {
       requestTitle: 'A Very Serious Going-Out Request',
+      summaryIntro: 'For {name}, with every request detail arranged for a clear review.',
       applicantIntro: 'The applicant hereby requests permission for a short activity and attaches the details required for the stamp holder’s consideration.',
       planNote: 'Any plan change must be reported to the official stamp holder before it takes effect.',
       commitments: ['Report upon arriving at the venue', 'Keep communication devices active', 'Report before moving to another venue', 'Return around the agreed estimate', 'Bring home stories as the final report'],
@@ -952,6 +963,7 @@ function sectionPresetCopy(locale: Locale, tone: PresetTone): SectionPresetCopy 
     },
     formal: {
       requestTitle: 'Application for an External Activity Permit',
+      summaryIntro: 'For {name}, this document presents the activity details clearly and completely.',
       applicantIntro: 'This document is submitted to present the proposed activity clearly and completely to the recipient.',
       planNote: 'Any change to the time, venue, or activity plan will be communicated to the recipient before it is carried out.',
       commitments: ['Provide an update upon arrival', 'Remain reachable throughout the activity', 'Communicate every change of plan', 'Return according to the stated estimate', 'Maintain personal safety and the recipient’s trust'],
@@ -980,7 +992,10 @@ function openSectionPreset(section: HeadingSection, tone: PresetTone) {
   };
   const changes: PresetChange[] = [];
   const add = (label: string, before: string | undefined, after: string, apply: () => void) => changes.push({ label, before: before || '', after, apply });
-  if (section === 'summary') add(c().requestTitle, project.request.title, copy.requestTitle, () => { project.request.title = copy.requestTitle; });
+  if (section === 'summary') {
+    add(c().requestTitle, project.request.title, copy.requestTitle, () => { project.request.title = copy.requestTitle; });
+    add(c().summaryIntro, project.request.summaryIntro ?? getGiftUi(project.locale).summaryIntroTemplate, copy.summaryIntro, () => { project.request.summaryIntro = copy.summaryIntro; });
+  }
   if (section === 'parties') {
     add(c().intro, project.applicant.intro, copy.applicantIntro, () => { project.applicant.intro = copy.applicantIntro; });
   }
