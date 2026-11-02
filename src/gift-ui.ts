@@ -3,7 +3,7 @@ import type { Locale } from './project';
 const id = {
   gateTitle: 'Permohonan', gateEmphasis: 'Izin Main',
   summaryTitle: 'Aku mau main sebentar.\nIni rencana lengkapnya.', requestLabel: 'PERMOHONAN', summaryPrefix: 'Buat', summarySuffix: 'supaya kamu nggak perlu tanya satu-satu dan aku nggak bisa menjawab, “lihat nanti, ya.”', reviewMark: 'UNTUK DIPERIKSA', requestTicket: 'REQUEST',
-  partiesEyebrow: 'DUA PIHAK', partiesTitle: 'Yang minta izin & yang pegang stempel.', applicantRole: 'pengaju izin main', recipientRole: 'pemegang keputusan akhir', submitting: 'MENGAJUKAN', littleNote: 'CATATAN KECIL', verified: 'DATA SESUAI',
+  partiesEyebrow: 'DUA PIHAK', partiesTitle: 'Yang minta izin & yang pegang stempel.', submitting: 'MENGAJUKAN', littleNote: 'CATATAN KECIL', verified: 'DATA SESUAI',
   planTitle: 'Bukan cuma “pergi bentar, ya”.', planSheet: 'LEMBAR RENCANA', purpose: 'KEPERLUAN', note: 'CATATAN',
   commitmentTitle: 'Janji kecil biar kamu tetap tenang.', applicantChecklist: 'CHECKLIST PEMOHON', checkAfterRead: 'centang setelah dibaca',
   defenseTitle: 'Versi jujur dari si pemohon.', goodIntent: 'Dengan niat baik,', honestStamp: 'JUJUR\n& JELAS',
@@ -16,7 +16,7 @@ const id = {
 const en: typeof id = {
   gateTitle: 'Going-Out', gateEmphasis: 'Permit',
   summaryTitle: 'I want to go out for a while.\nHere is the full plan.', requestLabel: 'REQUEST', summaryPrefix: 'For', summarySuffix: 'so you do not have to ask for every detail or hear “I’ll tell you later.”', reviewMark: 'FOR REVIEW', requestTicket: 'REQUEST',
-  partiesEyebrow: 'TWO PEOPLE', partiesTitle: 'The applicant & the person holding the stamp.', applicantRole: 'going-out permit applicant', recipientRole: 'holder of the final stamp', submitting: 'SUBMITTING TO', littleNote: 'A SMALL NOTE', verified: 'DETAILS VERIFIED',
+  partiesEyebrow: 'TWO PEOPLE', partiesTitle: 'The applicant & the person holding the stamp.', submitting: 'SUBMITTING TO', littleNote: 'A SMALL NOTE', verified: 'DETAILS VERIFIED',
   planTitle: 'More than just “I’ll be out for a bit”.', planSheet: 'PROPOSED PLAN', purpose: 'PURPOSE', note: 'NOTE',
   commitmentTitle: 'Small promises to help you feel at ease.', applicantChecklist: 'APPLICANT CHECKLIST', checkAfterRead: 'tick after reading',
   defenseTitle: 'An honest note from the applicant.', goodIntent: 'With good intentions,', honestStamp: 'HONEST\n& CLEAR',

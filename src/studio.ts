@@ -7,6 +7,7 @@ import '@fontsource/plus-jakarta-sans/latin-500.css';
 import '@fontsource/plus-jakarta-sans/latin-600.css';
 import '@fontsource/plus-jakarta-sans/latin-700.css';
 import './studio.css';
+import './studio-comic-dossier.css';
 import QRCode from 'qrcode';
 
 import { ApiError, loadStudioProject, publishStudioGift, saveStudioDraft, uploadStudioMedia } from './api';
@@ -235,7 +236,6 @@ function notePresets(locale: Locale) {
 
 function localizedDefaults(locale: Locale) {
   return locale === 'en' ? {
-    role: 'your partner who would rather explain the plan than leave you guessing',
     intro: 'I am meeting my friends this Saturday. Instead of sending a vague “I’ll let you know later”, I put every detail into this little file.',
     requestTitle: 'Out for a while, home with a smile',
     activity: 'Ramen, a good conversation, and a board-game night',
@@ -257,7 +257,6 @@ function localizedDefaults(locale: Locale) {
     cardTitle: 'Official Going-Out Permit',
     cardFooter: 'Valid while updates are given, time is respected, and stories are brought home.',
   } : {
-    role: demoProject.applicant.role || '',
     intro: demoProject.applicant.intro || '',
     requestTitle: demoProject.request.title,
     activity: demoProject.request.activity,
@@ -299,7 +298,6 @@ function translatePresetBackedContent(from: Locale, to: Locale) {
     return match >= 0 ? newPackages[match][key] : value;
   };
   project.request.title = swapPackageField(project.request.title, 'requestTitle') || project.request.title;
-  project.applicant.role = swapPackageField(project.applicant.role, 'applicantRole');
   project.applicant.intro = swapPackageField(project.applicant.intro, 'applicantIntro');
   project.request.note = swapPackageField(project.request.note, 'planNote');
   project.defenseNote = swapPackageField(project.defenseNote, 'defenseNote') || project.defenseNote;
@@ -317,7 +315,6 @@ function translatePresetBackedContent(from: Locale, to: Locale) {
   const oldDefaults = localizedDefaults(from);
   const newDefaults = localizedDefaults(to);
   const swap = (value: string | undefined, oldValue: string, newValue: string) => value === oldValue ? newValue : value;
-  project.applicant.role = swap(project.applicant.role, oldDefaults.role, newDefaults.role);
   project.applicant.intro = swap(project.applicant.intro, oldDefaults.intro, newDefaults.intro);
   project.request.title = swap(project.request.title, oldDefaults.requestTitle, newDefaults.requestTitle) || project.request.title;
   project.request.activity = swap(project.request.activity, oldDefaults.activity, newDefaults.activity) || project.request.activity;
@@ -477,7 +474,6 @@ function renderStepContent() {
         ${field(c().applicantNickname, 'applicant.nickname', project.applicant.nickname || '', { placeholder: uiLocale === 'id' ? 'Contoh: Adit' : 'Example: Adit' })}
         ${field(c().recipientNickname, 'recipient.nickname', project.recipient.nickname || '', { placeholder: uiLocale === 'id' ? 'Contoh: Nara' : 'Example: Nara' })}
       </div>
-      ${field(c().applicantRole, 'applicant.role', project.applicant.role || '', { placeholder: uiLocale === 'id' ? 'Contoh: pacarmu yang tetap ingat waktu' : 'Example: your partner who will keep you updated', hint: c().applicantRoleHint })}
       ${textarea(c().intro, 'applicant.intro', project.applicant.intro || '', { placeholder: uiLocale === 'id' ? 'Ceritakan singkat kenapa kamu membuat berkas ini…' : 'Briefly share why you made this little file…', hint: c().introHint, maxlength: 320 })}
     </div>`;
 
@@ -847,7 +843,6 @@ async function compressImage(file: File): Promise<{ blob: Blob; dataUrl: string 
 
 interface SectionPresetCopy {
   requestTitle: string;
-  applicantRole: string;
   applicantIntro: string;
   planNote: string;
   commitments: string[];
@@ -864,7 +859,6 @@ function sectionPresetCopy(locale: Locale, tone: PresetTone): SectionPresetCopy 
   const id: Record<PresetTone, SectionPresetCopy> = {
     playful: {
       requestTitle: 'Operasi main sebentar, pulang bawa cerita',
-      applicantRole: 'tersangka utama yang sudah menyiapkan alibi lengkap',
       applicantIntro: 'Daripada cuma bilang “nanti aku kabari”, kali ini aku datang membawa berkas, rencana, dan niat baik yang hampir resmi.',
       planNote: 'Kalau rencana berubah, aku kabari dulu. Tidak ada adegan menghilang lalu muncul dengan chat “hehe”.',
       commitments: ['Kasih kabar begitu sampai', 'HP tidak mendadak berubah jadi batu', 'Izin dulu sebelum pindah tempat', 'Pulang sesuai jam yang disepakati', 'Besok tetap ada waktu khusus buat kita'],
@@ -878,7 +872,6 @@ function sectionPresetCopy(locale: Locale, tone: PresetTone): SectionPresetCopy 
     },
     warm: {
       requestTitle: 'Pergi sebentar, tetap pulang kepadamu',
-      applicantRole: 'orang yang ingin pergi tanpa membuatmu khawatir',
       applicantIntro: 'Aku membuat berkas kecil ini supaya kamu tahu seluruh rencanaku dan tetap merasa tenang selama aku pergi.',
       planNote: 'Kalau ada perubahan apa pun, kamu akan jadi orang pertama yang aku kabari.',
       commitments: ['Aku akan memberi kabar setelah sampai', 'Aku tetap mudah dihubungi', 'Aku akan mengabari jika tempat berubah', 'Aku pulang sesuai waktu yang kita sepakati', 'Aku tetap menyisakan waktu khusus untuk kita'],
@@ -892,7 +885,6 @@ function sectionPresetCopy(locale: Locale, tone: PresetTone): SectionPresetCopy 
     },
     official: {
       requestTitle: 'Permohonan Izin Main yang Sangat Serius',
-      applicantRole: 'pemohon resmi dengan niat baik dan jadwal yang jelas',
       applicantIntro: 'Pemohon dengan ini mengajukan izin kegiatan singkat dan melampirkan detail yang diperlukan untuk pertimbangan pejabat pemberi stempel.',
       planNote: 'Setiap perubahan rencana wajib dilaporkan kepada pejabat pemberi stempel sebelum dilaksanakan.',
       commitments: ['Melapor setelah tiba di lokasi', 'Menjaga perangkat komunikasi tetap aktif', 'Melapor sebelum berpindah tempat', 'Pulang sesuai estimasi yang disepakati', 'Membawa pulang cerita sebagai laporan akhir'],
@@ -906,7 +898,6 @@ function sectionPresetCopy(locale: Locale, tone: PresetTone): SectionPresetCopy 
     },
     formal: {
       requestTitle: 'Permohonan Izin Kegiatan di Luar',
-      applicantRole: 'pihak pemohon',
       applicantIntro: 'Dokumen ini diajukan untuk menyampaikan rencana kegiatan secara jelas dan lengkap kepada pihak penerima.',
       planNote: 'Setiap perubahan waktu, tempat, atau susunan kegiatan akan disampaikan kepada penerima sebelum perubahan dilakukan.',
       commitments: ['Memberikan kabar setelah tiba di lokasi', 'Tetap dapat dihubungi selama kegiatan berlangsung', 'Menyampaikan setiap perubahan rencana', 'Kembali sesuai estimasi yang telah disampaikan', 'Menjaga keselamatan dan kepercayaan penerima'],
@@ -922,7 +913,6 @@ function sectionPresetCopy(locale: Locale, tone: PresetTone): SectionPresetCopy 
   const en: Record<PresetTone, SectionPresetCopy> = {
     playful: {
       requestTitle: 'A short mission, with stories on the way home',
-      applicantRole: 'the main suspect with a fully prepared alibi',
       applicantIntro: 'Instead of saying “I’ll tell you later”, I brought a file, a plan, and an almost-official amount of good intention.',
       planNote: 'If the plan changes, I will tell you first. No disappearing act followed by a tiny “hehe”.',
       commitments: ['Text as soon as I arrive', 'Keep my phone from turning into a brick', 'Ask before moving somewhere else', 'Come home around the agreed time', 'Save special time for us tomorrow'],
@@ -936,7 +926,6 @@ function sectionPresetCopy(locale: Locale, tone: PresetTone): SectionPresetCopy 
     },
     warm: {
       requestTitle: 'Out for a while, still coming home to you',
-      applicantRole: 'someone who wants to go without making you worry',
       applicantIntro: 'I made this little file so you know the whole plan and can feel at ease while I am away.',
       planNote: 'If anything changes, you will be the first person I tell.',
       commitments: ['I will let you know when I arrive', 'I will stay easy to reach', 'I will tell you if the venue changes', 'I will be home around our agreed time', 'I will still save special time for us'],
@@ -950,7 +939,6 @@ function sectionPresetCopy(locale: Locale, tone: PresetTone): SectionPresetCopy 
     },
     official: {
       requestTitle: 'A Very Serious Going-Out Request',
-      applicantRole: 'official applicant with good intentions and a clear schedule',
       applicantIntro: 'The applicant hereby requests permission for a short activity and attaches the details required for the stamp holder’s consideration.',
       planNote: 'Any plan change must be reported to the official stamp holder before it takes effect.',
       commitments: ['Report upon arriving at the venue', 'Keep communication devices active', 'Report before moving to another venue', 'Return around the agreed estimate', 'Bring home stories as the final report'],
@@ -964,7 +952,6 @@ function sectionPresetCopy(locale: Locale, tone: PresetTone): SectionPresetCopy 
     },
     formal: {
       requestTitle: 'Application for an External Activity Permit',
-      applicantRole: 'the applicant',
       applicantIntro: 'This document is submitted to present the proposed activity clearly and completely to the recipient.',
       planNote: 'Any change to the time, venue, or activity plan will be communicated to the recipient before it is carried out.',
       commitments: ['Provide an update upon arrival', 'Remain reachable throughout the activity', 'Communicate every change of plan', 'Return according to the stated estimate', 'Maintain personal safety and the recipient’s trust'],
@@ -995,7 +982,6 @@ function openSectionPreset(section: HeadingSection, tone: PresetTone) {
   const add = (label: string, before: string | undefined, after: string, apply: () => void) => changes.push({ label, before: before || '', after, apply });
   if (section === 'summary') add(c().requestTitle, project.request.title, copy.requestTitle, () => { project.request.title = copy.requestTitle; });
   if (section === 'parties') {
-    add(c().applicantRole, project.applicant.role, copy.applicantRole, () => { project.applicant.role = copy.applicantRole; });
     add(c().intro, project.applicant.intro, copy.applicantIntro, () => { project.applicant.intro = copy.applicantIntro; });
   }
   if (section === 'plan') add(c().planNote, project.request.note, copy.planNote, () => { project.request.note = copy.planNote; });

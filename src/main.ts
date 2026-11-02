@@ -10,6 +10,7 @@ import '@fontsource/plus-jakarta-sans/latin-600.css';
 import '@fontsource/plus-jakarta-sans/latin-700.css';
 import './styles.css';
 import './permit-desk.css';
+import './comic-dossier.css';
 
 import { approvePublicGift, loadPublicGift, loadPublicResponse } from './api';
 import { getCopy } from './copy';
@@ -194,14 +195,14 @@ root.innerHTML = `
             <div class="person-card__photo">
               ${project.applicant.photoUrl ? `<img src="${escapeHtml(project.applicant.photoUrl)}" alt="Foto ${escapeHtml(project.applicant.name)}" onerror="this.hidden=true;this.nextElementSibling.hidden=false" /><span hidden>${escapeHtml(project.applicant.name.slice(0, 1))}</span>` : `<span>${escapeHtml(project.applicant.name.slice(0, 1))}</span>`}
             </div>
-            <figcaption><span>${strings.applicantName.toUpperCase()}</span><strong>${escapeHtml(project.applicant.name)}</strong><small>${escapeHtml(project.applicant.role || ui.applicantRole)}</small></figcaption>
+            <figcaption><span>${strings.applicantName.toUpperCase()}</span><strong>${escapeHtml(project.applicant.name)}</strong></figcaption>
           </figure>
           <div class="case-connection" aria-hidden="true"><span>${ui.submitting}</span><i>${icon('arrow')}</i></div>
           <figure class="person-card person-card--recipient">
             <div class="person-card__photo">
               ${project.recipient.photoUrl ? `<img src="${escapeHtml(project.recipient.photoUrl)}" alt="Foto ${escapeHtml(project.recipient.name)}" onerror="this.hidden=true;this.nextElementSibling.hidden=false" /><span hidden>${escapeHtml(project.recipient.name.slice(0, 1))}</span>` : `<span>${escapeHtml(project.recipient.name.slice(0, 1))}</span>`}
             </div>
-            <figcaption><span>${strings.recipientName.toUpperCase()}</span><strong>${escapeHtml(project.recipient.name)}</strong><small>${ui.recipientRole}</small></figcaption>
+            <figcaption><span>${strings.recipientName.toUpperCase()}</span><strong>${escapeHtml(project.recipient.name)}</strong></figcaption>
           </figure>
         </div>
         <div class="identity-file__body">
@@ -339,6 +340,11 @@ root.innerHTML = `
 
 document.documentElement.dataset.theme = project.theme;
 document.documentElement.dataset.template = 'permit-desk';
+if (isLocalPreview && pageParams.get('template') === 'comic-dossier') {
+  document.documentElement.dataset.demoStyle = 'comic-dossier';
+} else {
+  delete document.documentElement.dataset.demoStyle;
+}
 document.documentElement.lang = project.locale;
 
 document.querySelectorAll<HTMLElement>('.gift-page').forEach((page) => {
