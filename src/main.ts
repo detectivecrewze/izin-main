@@ -340,10 +340,10 @@ root.innerHTML = `
 
 document.documentElement.dataset.theme = project.theme;
 document.documentElement.dataset.template = 'permit-desk';
-if (isLocalPreview && pageParams.get('template') === 'comic-dossier') {
-  document.documentElement.dataset.demoStyle = 'comic-dossier';
+if (!(isLocalPreview && pageParams.get('template') === 'permit-desk')) {
+  document.documentElement.dataset.giftStyle = 'comic-dossier';
 } else {
-  delete document.documentElement.dataset.demoStyle;
+  delete document.documentElement.dataset.giftStyle;
 }
 document.documentElement.lang = project.locale;
 
