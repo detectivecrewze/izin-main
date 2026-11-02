@@ -228,8 +228,8 @@ svg { width: 1.2em; height: 1.2em; display: block; }
 .publish-barcode__head > div { display: grid; gap: 3px; }
 .publish-barcode__head small { color: var(--studio-accent); font: 600 6px "IBM Plex Mono", monospace; letter-spacing: .1em; }
 .publish-barcode__head strong { font: 400 18px "DM Serif Display", serif; }
-.publish-barcode__qr { z-index: 1; width: min(250px, 78vw); aspect-ratio: 1; padding: 8px; display: grid; place-items: center; border: 1px solid rgba(163,60,53,.24); background: var(--studio-paper); }
-.publish-barcode__qr img { width: 100%; height: 100%; display: block; }
+.publish-barcode__qr { z-index: 1; width: min(270px, 78vw); aspect-ratio: 1; padding: 0; display: grid; place-items: center; overflow: visible; border: 0; background: transparent; }
+.publish-barcode__qr svg { width: 100%; height: 100%; display: block; overflow: visible; shape-rendering: crispEdges; }
 .publish-barcode > strong { z-index: 1; margin-top: 3px; font: 400 24px "DM Serif Display", serif; }
 .publish-barcode > small { z-index: 1; color: var(--studio-accent); font: 600 7px "IBM Plex Mono", monospace; letter-spacing: .12em; }
 .publish-qr-loading { color: var(--studio-muted); font-size: 9px; text-align: center; }

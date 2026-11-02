@@ -471,8 +471,8 @@ function renderStepContent() {
       <div class="field-grid">
         ${field(c().applicantName, 'applicant.name', project.applicant.name, { placeholder: uiLocale === 'id' ? 'Contoh: Adit Pranata' : 'Example: Adit Pranata', required: true })}
         ${field(c().recipientName, 'recipient.name', project.recipient.name, { placeholder: uiLocale === 'id' ? 'Contoh: Nara Putri' : 'Example: Nara Putri', required: true })}
-        ${field(c().applicantNickname, 'applicant.nickname', project.applicant.nickname || '', { placeholder: uiLocale === 'id' ? 'Contoh: Adit' : 'Example: Adit' })}
-        ${field(c().recipientNickname, 'recipient.nickname', project.recipient.nickname || '', { placeholder: uiLocale === 'id' ? 'Contoh: Nara' : 'Example: Nara' })}
+        ${field(c().applicantNickname, 'applicant.nickname', project.applicant.nickname || '', { placeholder: uiLocale === 'id' ? 'Contoh: Adit' : 'Example: Adit', hint: c().nicknameHint })}
+        ${field(c().recipientNickname, 'recipient.nickname', project.recipient.nickname || '', { placeholder: uiLocale === 'id' ? 'Contoh: Nara' : 'Example: Nara', hint: c().nicknameHint })}
       </div>
       ${textarea(c().intro, 'applicant.intro', project.applicant.intro || '', { placeholder: uiLocale === 'id' ? 'Ceritakan singkat kenapa kamu membuat berkas ini…' : 'Briefly share why you made this little file…', hint: c().introHint, maxlength: 320 })}
     </div>`;
@@ -1083,13 +1083,78 @@ async function copyGiftLink() {
   }
 }
 
-async function createQrDataUrl(size = 360) {
+function isInsideHeart(x: number, y: number, grid: number) {
+  const normalizedX = ((x + 0.5 - grid / 2) / (grid / 2)) * 1.3;
+  const normalizedY = -((y + 0.5 - grid / 2) / (grid / 2)) * 1.3;
+  const x2 = normalizedX * normalizedX;
+  const y2 = normalizedY * normalizedY;
+  const term = x2 + y2 - 1;
+  return term * term * term - x2 * y2 * normalizedY <= 0;
+}
+
+function isDecorativeHeartDot(x: number, y: number) {
+  const value = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
+  return value - Math.floor(value) > 0.47;
+}
+
+function appendQrRect(svg: SVGElement, x: number, y: number, width: number, height: number, fill: string, radius = 0) {
+  const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  rect.setAttribute('x', String(x));
+  rect.setAttribute('y', String(y));
+  rect.setAttribute('width', String(width));
+  rect.setAttribute('height', String(height));
+  rect.setAttribute('fill', fill);
+  if (radius) rect.setAttribute('rx', String(radius));
+  svg.append(rect);
+}
+
+function createHeartQrSvg(url = publicGiftUrl()) {
   const theme = themes[project.theme];
-  return QRCode.toDataURL(publicGiftUrl(), {
-    width: size,
-    margin: 2,
-    errorCorrectionLevel: 'H',
-    color: { dark: theme.dark, light: theme.paper },
+  const matrix = QRCode.create(url, { errorCorrectionLevel: 'H' }).modules;
+  const count = matrix.size;
+  const grid = Math.ceil(count * 2.25);
+  const offset = Math.floor((grid - count) / 2);
+  const quiet = 2;
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+  svg.setAttribute('viewBox', `0 0 ${grid} ${grid}`);
+  svg.setAttribute('role', 'img');
+  svg.setAttribute('aria-label', project.locale === 'en' ? 'Heart-shaped QR code' : 'Barcode QR berbentuk hati');
+  svg.setAttribute('shape-rendering', 'crispEdges');
+
+  const heartCells = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  heartCells.setAttribute('fill', theme.color);
+  heartCells.setAttribute('opacity', '.8');
+  for (let y = 0; y < grid; y += 1) {
+    for (let x = 0; x < grid; x += 1) {
+      const inQuietArea = x >= offset - quiet && x < offset + count + quiet && y >= offset - quiet && y < offset + count + quiet;
+      if (!inQuietArea && isInsideHeart(x, y, grid) && isDecorativeHeartDot(x, y)) {
+        appendQrRect(heartCells, x + 0.12, y + 0.12, 0.76, 0.76, theme.color, 0.26);
+      }
+    }
+  }
+  svg.append(heartCells);
+
+  appendQrRect(svg, offset - quiet, offset - quiet, count + quiet * 2, count + quiet * 2, theme.paper, 2);
+  const qrCells = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  qrCells.setAttribute('fill', theme.ink);
+  for (let y = 0; y < count; y += 1) {
+    for (let x = 0; x < count; x += 1) {
+      if (matrix.get(y, x)) appendQrRect(qrCells, offset + x, offset + y, 1, 1, theme.ink);
+    }
+  }
+  svg.append(qrCells);
+  return svg;
+}
+
+function qrSvgToImage(svg: SVGSVGElement) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const source = new XMLSerializer().serializeToString(svg);
+    const imageUrl = URL.createObjectURL(new Blob([source], { type: 'image/svg+xml;charset=utf-8' }));
+    const image = new Image();
+    image.onload = () => { URL.revokeObjectURL(imageUrl); resolve(image); };
+    image.onerror = () => { URL.revokeObjectURL(imageUrl); reject(new Error('Could not render QR image')); };
+    image.src = imageUrl;
   });
 }
 
@@ -1098,8 +1163,9 @@ async function renderPublishBarcode() {
   if (!holder) return;
   holder.innerHTML = `<span class="publish-qr-loading">${c().makingBarcode}</span>`;
   try {
-    const dataUrl = await createQrDataUrl(360);
-    holder.innerHTML = `<img src="${dataUrl}" alt="Barcode untuk membuka gift ${escapeHtml(project.recipient.nickname || project.recipient.name)}" />`;
+    const svg = createHeartQrSvg();
+    svg.setAttribute('aria-label', `${project.locale === 'en' ? 'Open the gift for' : 'Buka gift untuk'} ${project.recipient.nickname || project.recipient.name}`);
+    holder.replaceChildren(svg);
   } catch {
     holder.innerHTML = `<span class="publish-qr-loading">${c().barcodeFailed}</span>`;
   }
@@ -1137,9 +1203,7 @@ async function downloadPublishBarcode() {
   context.fillStyle = theme.color;
   context.fillText(`${project.locale === 'id' ? 'UNTUK' : 'FOR'} ${String(project.recipient.nickname || project.recipient.name).toUpperCase()}`, 540, 340);
 
-  const qrImage = new Image();
-  qrImage.src = await createQrDataUrl(560);
-  await qrImage.decode();
+  const qrImage = await qrSvgToImage(createHeartQrSvg());
   context.drawImage(qrImage, 260, 390, 560, 560);
 
   context.save();
