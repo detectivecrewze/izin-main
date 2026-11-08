@@ -108,6 +108,7 @@ const c = () => studioText(uiLocale);
 let currentStep = 0;
 let saveTimer = 0;
 let previewRefreshTimer = 0;
+let finalPreviewRefreshTimer = 0;
 let playlist: PlaylistSong[] = [];
 let presetPayload: PresetPayload | undefined;
 let uploadAudioUrl = project.music?.audioUrl.startsWith('blob:') ? project.music.audioUrl : undefined;
@@ -552,6 +553,17 @@ function renderStepContent() {
   return `
     <div class="form-section form-section--review">
       <div class="form-section__title"><span>07</span><div><h2>${c().publishEditorTitle}</h2><p>${c().publishEditorText}</p></div></div>
+      <div class="final-preview-layout">
+        <section class="final-live-preview" aria-label="${c().fullGiftPreview}">
+          <div class="final-live-preview__bar">
+            <span><small>${c().livePreview}</small><strong>${c().fullGiftPreview}</strong><em>${c().finalPreviewHint}</em></span>
+            <button type="button" id="refresh-final-preview">${icon('eye')}<span>${c().refreshPreview}</span></button>
+          </div>
+          <div class="final-live-preview__screen">
+            <iframe id="final-preview-frame" title="${c().previewFrameTitle}" loading="eager"></iframe>
+          </div>
+        </section>
+        <div class="final-publish-card">
       <div class="review-grid">
         <article><span>${c().forLabel}</span><strong>${escapeHtml(project.recipient.nickname || project.recipient.name)}</strong><small>${escapeHtml(project.request.title)}</small></article>
         <article><span>${c().scheduleLabel}</span><strong>${escapeHtml(project.request.date)}</strong><small>${escapeHtml(project.request.departureTime)} — ${escapeHtml(project.request.returnEstimate)}</small></article>
@@ -571,6 +583,8 @@ function renderStepContent() {
         </article>
         <span>${c().giftLink}</span><strong id="published-link">${escapeHtml(publicGiftUrl())}</strong>
         <div class="publish-result__actions"><button type="button" id="copy-link">${icon('copy')} ${c().copyLink}</button><a href="${escapeHtml(publicGiftUrl())}" target="_blank">${icon('eye')} ${c().openGift}</a><button type="button" id="download-barcode">${icon('download')} ${c().downloadBarcode}</button></div>
+      </div>
+        </div>
       </div>
     </div>`;
 }
@@ -598,6 +612,7 @@ function renderStep(options: { moveToTop?: boolean } = {}) {
   if (!heading || !form) return;
   heading.innerHTML = `<span>${c().step} ${String(currentStep + 1).padStart(2, '0')} / ${String(steps.length).padStart(2, '0')}</span><h1>${steps[currentStep].label}</h1><p>${steps[currentStep].short}</p>`;
   form.innerHTML = renderStepContent();
+  document.querySelector<HTMLElement>('.studio-layout')?.classList.toggle('is-publish-step', currentStep === steps.length - 1);
   bindFormEvents(form);
   const previewRailLabel = document.querySelector<HTMLElement>('#preview-rail-label');
   if (previewRailLabel) previewRailLabel.textContent = steps[currentStep].label;
@@ -609,7 +624,11 @@ function renderStep(options: { moveToTop?: boolean } = {}) {
     next.querySelector('span')!.textContent = currentStep === steps.length - 2 ? c().reviewPublish : c().next;
   }
   renderSideSummary();
-  if (currentStep === steps.length - 1 && (isDemoAccess ? localStorage.getItem(publishedKey) : remotePublished)) void renderPublishBarcode();
+  if (currentStep === steps.length - 1) {
+    writePreviewProject();
+    window.requestAnimationFrame(() => refreshFinalPreviewFrame());
+    if (isDemoAccess ? localStorage.getItem(publishedKey) : remotePublished) void renderPublishBarcode();
+  }
   window.requestAnimationFrame(() => {
     window.scrollTo({ top: options.moveToTop ? 0 : previousScrollY, behavior: options.moveToTop ? 'smooth' : 'auto' });
   });
@@ -680,6 +699,7 @@ function bindFormEvents(form: HTMLFormElement) {
   form.querySelector<HTMLButtonElement>('#publish-button')?.addEventListener('click', publishGift);
   form.querySelector<HTMLButtonElement>('#copy-link')?.addEventListener('click', () => void copyGiftLink());
   form.querySelector<HTMLButtonElement>('#download-barcode')?.addEventListener('click', () => void downloadPublishBarcode());
+  form.querySelector<HTMLButtonElement>('#refresh-final-preview')?.addEventListener('click', () => refreshFinalPreviewFrame(true));
 }
 
 function setProjectValue(path: string, value: string) {
@@ -724,6 +744,10 @@ function writePreviewProject() {
     window.clearTimeout(previewRefreshTimer);
     previewRefreshTimer = window.setTimeout(refreshPreviewFrame, 360);
   }
+  if (document.querySelector('#final-preview-frame')) {
+    window.clearTimeout(finalPreviewRefreshTimer);
+    finalPreviewRefreshTimer = window.setTimeout(() => refreshFinalPreviewFrame(), 360);
+  }
 }
 
 function renderSideSummary() {
@@ -751,6 +775,15 @@ function refreshPreviewFrame() {
   if (!frame) return;
   const params = new URLSearchParams({ open: '1', studioPreview: projectId, section: steps[currentStep].section });
   frame.src = `/?${params.toString()}`;
+}
+
+function refreshFinalPreviewFrame(forceReload = false) {
+  const frame = document.querySelector<HTMLIFrameElement>('#final-preview-frame');
+  if (!frame) return;
+  const params = new URLSearchParams({ studioPreview: projectId });
+  if (forceReload) params.set('refresh', String(Date.now()));
+  const nextSource = `/?${params.toString()}`;
+  if (forceReload || frame.getAttribute('src') !== nextSource) frame.src = nextSource;
 }
 
 async function loadPlaylist() {

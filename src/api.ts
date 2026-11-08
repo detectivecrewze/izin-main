@@ -1,5 +1,8 @@
 import type { IzinMainProject, PermitResponse } from './project';
 
+// Development uses a same-origin Vite bridge whose target is the deployed
+// Worker (see vite.config.ts). It never uses a local Worker/KV, while remaining
+// reliable when Vite needs to move to another localhost port.
 const defaultApiBase = import.meta.env.DEV
   ? '/api'
   : 'https://izin-main.aldoramadhan16.workers.dev';

@@ -335,6 +335,27 @@ body.studio-body .studio-preview__bar button {
   box-shadow: 2px 3px 0 var(--studio-dark);
 }
 body.studio-body .studio-preview__screen { background: #34302d; }
+body.studio-body .final-live-preview {
+  border: 3px solid var(--studio-dark);
+  border-radius: 17px;
+  background: #34302d;
+  box-shadow: 5px 6px 0 var(--studio-dark);
+}
+body.studio-body .final-live-preview__bar {
+  border-bottom: 3px solid var(--studio-dark);
+  color: var(--studio-ink);
+  background: var(--studio-yellow);
+}
+body.studio-body .final-live-preview__bar small { color: var(--studio-accent); }
+body.studio-body .final-live-preview__bar em { color: #292a29a8; }
+body.studio-body .final-live-preview__bar button {
+  color: var(--studio-ink);
+  border: 2px solid var(--studio-dark);
+  border-radius: 9px;
+  background: var(--studio-paper);
+  box-shadow: 2px 3px 0 var(--studio-dark);
+}
+body.studio-body .final-live-preview__screen { background: #34302d; }
 body.studio-body .preset-dialog__paper {
   border: 3px solid var(--studio-dark);
   border-radius: 20px;
